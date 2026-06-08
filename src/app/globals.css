@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --background-soft: #f4f4f5;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted: #f4f4f5;
+  --border: #e4e4e7;
+  --border-subtle: #ebebeb;
+  --text: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  --text-inverse: #ffffff;
+  --accent: #09090b;
+  --accent-dark: #27272a;
+  --accent-subtle: rgba(9, 9, 11, 0.08);
+  --button: #09090b;
+  --button-hover: #27272a;
+  --coral: #e85d3a;
+  --success: #16a34a;
+  --warning: #ca8a04;
+  --error: #dc2626;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-soft: var(--background-soft);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-foreground: var(--text);
+  --color-muted: var(--text-muted);
+  --color-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-button: var(--button);
+  --color-button-hover: var(--button-hover);
+  --color-coral: var(--coral);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-inverse: var(--text-inverse);
+  --font-sans: var(--font-geist-sans);
+  --radius-pill: 9999px;
+  --radius-card: 28px;
+  --radius-input: 16px;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+input,
+select,
+textarea {
+  color-scheme: light;
+}

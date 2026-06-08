@@ -1,0 +1,121 @@
+export type VideoStatus = 'draft' | 'published' | 'archived';
+export type VideoType = 'signature' | 'complementary';
+export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'none';
+export type SubscriptionRecordStatus = 'active' | 'cancelled' | 'expired' | 'grace_period';
+
+export type Program = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  goal: string;
+  description: string | null;
+  duration_weeks: number;
+  cover_image_url: string | null;
+  tagline: string | null;
+  signature_session_id: string | null;
+  signature_session_ids: string[];
+  complementary_session_ids: string[];
+  is_premium: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Video = {
+  id: string;
+  program_id: string;
+  title: string;
+  description: string | null;
+  duration_seconds: number;
+  thumbnail_url: string | null;
+  vimeo_video_id: string;
+  vimeo_hash: string | null;
+  type: VideoType;
+  week_number: number;
+  order_in_week: number;
+  status: VideoStatus;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Exercise = {
+  id: string;
+  name: string;
+  muscle_groups: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VideoExercise = {
+  id: string;
+  video_id: string;
+  library_exercise_id: string | null;
+  name: string;
+  muscle_groups: string | null;
+  target_sets: number;
+  target_reps: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ExerciseDraft = {
+  id?: string;
+  library_exercise_id: string;
+  name: string;
+  muscle_groups: string;
+  target_sets: number;
+  target_reps: number;
+  sort_order: number;
+};
+
+export type Profile = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  subscription_status: SubscriptionStatus;
+  subscription_expires_at: string | null;
+  current_program_id: string | null;
+  onboarding_completed: boolean;
+  premium_prompt_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Subscription = {
+  id: string;
+  user_id: string;
+  product_id: string;
+  platform: 'ios' | 'android' | 'web' | null;
+  status: SubscriptionRecordStatus;
+  price_monthly: number;
+  currency: string;
+  revenuecat_customer_id: string | null;
+  store_transaction_id: string | null;
+  started_at: string;
+  expires_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+};
+
+export type CommunityPost = {
+  id: string;
+  user_id: string;
+  content: string;
+  image_url: string | null;
+  created_at: string;
+  author_email?: string;
+  author_name?: string;
+};
+
+export type DashboardStats = {
+  users: number;
+  activeSubscriptions: number;
+  programs: number;
+  publishedVideos: number;
+  sessionsThisMonth: number;
+  communityPosts: number;
+};
