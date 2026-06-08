@@ -12,7 +12,9 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLocale();
-  const unauthorized = searchParams.get('error') === 'unauthorized';
+  const errorParam = searchParams.get('error');
+  const unauthorized = errorParam === 'unauthorized';
+  const configError = errorParam === 'config';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,7 +22,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (unauthorized) setError(t('login.adminOnly'));
-  }, [unauthorized, t]);
+    else if (configError) setError(t('login.configError'));
+  }, [unauthorized, configError, t]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

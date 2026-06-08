@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '6mb',
     },
   },
+  outputFileTracingIncludes: {
+    '*': ['./node_modules/@swc/helpers/**/*'],
+  },
 };
 
 export default nextConfig;

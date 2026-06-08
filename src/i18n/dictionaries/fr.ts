@@ -39,6 +39,7 @@ export const fr = {
     submit: 'Se connecter',
     loading: 'Connexion…',
     adminOnly: 'Accès réservé aux administrateurs.',
+    configError: 'Configuration serveur incomplète. Vérifiez les variables d’environnement Supabase sur Vercel.',
     serverError: 'Impossible de joindre le serveur. Vérifiez que npm run dev tourne encore.',
   },
   dashboard: {

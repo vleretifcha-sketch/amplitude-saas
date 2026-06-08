@@ -41,6 +41,7 @@ export const en: Dictionary = {
     submit: 'Sign in',
     loading: 'Signing in…',
     adminOnly: 'Access restricted to administrators.',
+    configError: 'Incomplete server configuration. Check Supabase environment variables on Vercel.',
     serverError: 'Unable to reach the server. Check that npm run dev is still running.',
   },
   dashboard: {
