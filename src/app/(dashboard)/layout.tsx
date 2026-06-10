@@ -1,22 +1,31 @@
 import { redirect } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { isAdminEmail } from '@/lib/auth';
+import { getPublicSupabaseEnv } from '@/lib/env';
 import { getLocale } from '@/i18n';
 import { LocaleProvider } from '@/i18n/client';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
+  if (!getPublicSupabaseEnv()) {
+    redirect('/login?error=config');
   }
 
-  if (!isAdminEmail(user.email)) {
-    redirect('/login?error=unauthorized');
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      redirect('/login');
+    }
+
+    if (!isAdminEmail(user.email)) {
+      redirect('/login?error=unauthorized');
+    }
+  } catch {
+    redirect('/login?error=config');
   }
 
   const locale = await getLocale();

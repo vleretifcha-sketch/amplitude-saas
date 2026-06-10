@@ -47,8 +47,40 @@ export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
             placeholder={t('exercises.placeholderMuscle')}
           />
         </Field>
+        <Field>
+          <Label htmlFor="vimeo_video_id">{t('exercises.formVimeoId')}</Label>
+          <Input
+            id="vimeo_video_id"
+            name="vimeo_video_id"
+            defaultValue={exercise?.vimeo_video_id ?? ''}
+            placeholder="123456789"
+            required
+          />
+        </Field>
+        <Field>
+          <Label htmlFor="vimeo_hash">{t('exercises.formVimeoHash')}</Label>
+          <Input
+            id="vimeo_hash"
+            name="vimeo_hash"
+            defaultValue={exercise?.vimeo_hash ?? ''}
+            placeholder="abc123"
+          />
+        </Field>
       </div>
       <p className="text-sm text-muted">{t('exercises.formHint')}</p>
+      {exercise?.vimeo_video_id ? (
+        <p className="text-sm text-secondary">
+          {t('exercises.vimeoPreview')}{' '}
+          <a
+            href={`https://vimeo.com/${exercise.vimeo_video_id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent underline"
+          >
+            vimeo.com/{exercise.vimeo_video_id}
+          </a>
+        </p>
+      ) : null}
       {error ? <p className="text-sm text-error">{error}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}

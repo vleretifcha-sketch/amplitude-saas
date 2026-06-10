@@ -13,6 +13,8 @@ function sortExercises(rows: Exercise[], sortKey: string, direction: SortDirecti
 
   sorted.sort((a, b) => {
     switch (sortKey) {
+      case 'video':
+        return compareText(a.vimeo_video_id ?? '', b.vimeo_video_id ?? '', direction);
       case 'muscle':
         return compareText(a.muscle_groups ?? '', b.muscle_groups ?? '', direction);
       case 'name':
@@ -41,11 +43,12 @@ export function ExercisesTable({ exercises }: { exercises: Exercise[] }) {
             <tr>
               <th className="px-6 py-3">{t('exercises.colName')}</th>
               <th className="px-6 py-3">{t('exercises.colMuscle')}</th>
+              <th className="px-6 py-3">{t('exercises.colVideo')}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td colSpan={2} className="px-6 py-8 text-center text-muted">
+              <td colSpan={3} className="px-6 py-8 text-center text-muted">
                 {t('exercises.empty')}
               </td>
             </tr>
@@ -74,6 +77,13 @@ export function ExercisesTable({ exercises }: { exercises: Exercise[] }) {
               sortDirection={sortDirection}
               onSort={toggleSort}
             />
+            <SortableTableHead
+              label={t('exercises.colVideo')}
+              columnKey="video"
+              sortKey={sortKey}
+              sortDirection={sortDirection}
+              onSort={toggleSort}
+            />
           </tr>
         </thead>
         <tbody>
@@ -88,6 +98,20 @@ export function ExercisesTable({ exercises }: { exercises: Exercise[] }) {
                 </Link>
               </td>
               <td className="px-6 py-4 text-secondary">{exercise.muscle_groups ?? t('common.dash')}</td>
+              <td className="px-6 py-4 text-secondary">
+                {exercise.vimeo_video_id ? (
+                  <a
+                    href={`https://vimeo.com/${exercise.vimeo_video_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent hover:underline"
+                  >
+                    {exercise.vimeo_video_id}
+                  </a>
+                ) : (
+                  t('common.dash')
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

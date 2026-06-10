@@ -1,32 +1,32 @@
-import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { DashboardStatCards } from '@/components/dashboard/DashboardStatCards';
+import { RecentSubscriptionsList, SubscriptionChart } from '@/components/dashboard/DashboardWidgets';
 import { createTranslator, getLocale } from '@/i18n';
-import { getDashboardStats } from '@/lib/data';
+import { getDashboardStats, getRecentSubscriptions, getSubscriptionChartRows } from '@/lib/data';
+import { isServerConfigured } from '@/lib/env';
 
 export default async function DashboardPage() {
   const locale = await getLocale();
   const t = createTranslator(locale);
-  const stats = await getDashboardStats();
-
-  const statLabels: { key: keyof typeof stats; label: string }[] = [
-    { key: 'users', label: t('dashboard.users') },
-    { key: 'activeSubscriptions', label: t('dashboard.activeSubscriptions') },
-    { key: 'programs', label: t('dashboard.programs') },
-    { key: 'publishedVideos', label: t('dashboard.publishedSessions') },
-    { key: 'sessionsThisMonth', label: t('dashboard.sessionsThisMonth') },
-    { key: 'communityPosts', label: t('dashboard.communityPosts') },
-  ];
+  const [stats, recentSubscriptions, chartRows] = await Promise.all([
+    getDashboardStats(),
+    getRecentSubscriptions(),
+    getSubscriptionChartRows(),
+  ]);
+  const configured = isServerConfigured();
 
   return (
-    <div>
+    <div className="space-y-8">
+      {!configured ? (
+        <p className="rounded-2xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+          {t('login.configError')}
+        </p>
+      ) : null}
       <PageHeader title={t('dashboard.title')} description={t('dashboard.description')} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {statLabels.map(({ key, label }) => (
-          <Card key={key}>
-            <p className="text-sm text-secondary">{label}</p>
-            <p className="mt-2 text-3xl font-semibold text-accent">{stats[key]}</p>
-          </Card>
-        ))}
+      <DashboardStatCards stats={stats} />
+      <div className="grid gap-6 xl:grid-cols-2">
+        <SubscriptionChart rows={chartRows} />
+        <RecentSubscriptionsList subscriptions={recentSubscriptions} />
       </div>
     </div>
   );

@@ -43,6 +43,8 @@ export type Exercise = {
   id: string;
   name: string;
   muscle_groups: string | null;
+  vimeo_video_id: string | null;
+  vimeo_hash: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -81,6 +83,7 @@ export type Profile = {
   current_program_id: string | null;
   onboarding_completed: boolean;
   premium_prompt_count: number;
+  last_premium_prompt_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -118,4 +121,21 @@ export type DashboardStats = {
   publishedVideos: number;
   sessionsThisMonth: number;
   communityPosts: number;
+};
+
+export type RecentSubscriptionRow = {
+  id: string;
+  user_id: string;
+  userName: string;
+  userEmail: string;
+  product_id: string;
+  status: SubscriptionRecordStatus;
+  platform: Subscription['platform'];
+  started_at: string;
+  expires_at: string | null;
+};
+
+export type SubscriptionChartRow = {
+  started_at: string;
+  status: SubscriptionRecordStatus;
 };
