@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DeleteUserButton } from '@/components/users/DeleteUserButton';
+import { SuspendUserButton } from '@/components/users/SuspendUserButton';
 import { SubscriptionForm } from '@/components/users/SubscriptionForm';
 import { UserProfileForm } from '@/components/users/UserProfileForm';
 import { createTranslator, getDateLocale, getLocale, translateStatus } from '@/i18n';
@@ -100,6 +101,10 @@ export default async function UserDetailPage({
               </div>
             ) : null}
             <div className="flex justify-between gap-4">
+              <dt className="text-secondary">{t('users.stripeCustomer')}</dt>
+              <dd className="truncate text-right font-mono text-xs">{p.stripe_customer_id ?? t('common.dash')}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
               <dt className="text-secondary">{t('users.subExpires')}</dt>
               <dd>
                 {p.subscription_expires_at
@@ -123,6 +128,11 @@ export default async function UserDetailPage({
           <Card>
             <h2 className="mb-4 text-lg font-medium">{t('users.subscription')}</h2>
             <SubscriptionForm profile={p} />
+            {(p.subscription_status === 'active' || p.subscription_status === 'trial') ? (
+              <div className="mt-4 border-t border-border-subtle pt-4">
+                <SuspendUserButton userId={p.id} />
+              </div>
+            ) : null}
             {(subs as Subscription[] | null)?.length ? (
               <div className="mt-6 space-y-2 border-t border-border-subtle pt-4 text-sm">
                 <p className="text-secondary">{t('users.subscriptionHistory')}</p>

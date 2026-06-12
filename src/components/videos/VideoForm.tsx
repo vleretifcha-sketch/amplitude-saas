@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { deleteVideo, upsertVideo } from '@/actions/videos';
 import { Button } from '@/components/ui/Button';
 import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
@@ -22,18 +24,20 @@ export function VideoForm({
   exercises?: VideoExercise[];
 }) {
   const { t } = useLocale();
-  const [error, setError] = useState('');
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<Video['type']>(video?.type ?? 'signature');
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
-    setError('');
     try {
       const id = await upsertVideo(formData);
-      window.location.href = `/videos/${id}`;
+      toast.success(video ? t('toast.saved') : t('toast.created'));
+      router.push(`/videos/${id}`);
+      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
       setLoading(false);
     }
   }
@@ -118,11 +122,8 @@ export function VideoForm({
           <Textarea id="description" name="description" rows={3} defaultValue={video?.description ?? ''} />
         </Field>
 
-        {type === 'complementary' ? (
-          <ExerciseListEditor library={library} initialExercises={exercises} />
-        ) : null}
+        <ExerciseListEditor library={library} initialExercises={exercises} />
       </div>
-      {error ? <p className="text-sm text-error">{error}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}
       </Button>

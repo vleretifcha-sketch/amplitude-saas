@@ -1,27 +1,31 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { deleteLibraryExercise, upsertLibraryExercise } from '@/actions/exercises';
 import { Button } from '@/components/ui/Button';
 import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
-import { Field, Input, Label } from '@/components/ui/Input';
+import { Field, Input, Label, Textarea } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
 import type { Exercise } from '@/lib/types';
 import { buildVimeoWatchUrl } from '@/lib/vimeo';
 
 export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
   const { t } = useLocale();
-  const [error, setError] = useState('');
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
-    setError('');
     try {
       const id = await upsertLibraryExercise(formData);
-      window.location.href = `/exercises/${id}`;
+      toast.success(exercise ? t('toast.saved') : t('toast.created'));
+      router.push(`/exercises/${id}`);
+      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
       setLoading(false);
     }
   }
@@ -47,6 +51,16 @@ export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
             name="muscle_groups"
             defaultValue={exercise?.muscle_groups ?? ''}
             placeholder={t('exercises.placeholderMuscle')}
+          />
+        </Field>
+        <Field className="md:col-span-2">
+          <Label htmlFor="description">{t('exercises.formDescription')}</Label>
+          <Textarea
+            id="description"
+            name="description"
+            rows={4}
+            defaultValue={exercise?.description ?? ''}
+            placeholder={t('exercises.placeholderDescription')}
           />
         </Field>
         <Field>
@@ -84,7 +98,6 @@ export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
           </a>
         </p>
       ) : null}
-      {error ? <p className="text-sm text-error">{error}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}
       </Button>

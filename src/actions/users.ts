@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getStripeClient } from '@/lib/stripe/server';
+import { attachStripeSubscription, createStripeCustomerOnly } from '@/lib/stripe/users';
 import type { SubscriptionStatus } from '@/lib/types';
 
 async function syncSubscriptionRecords(
@@ -142,6 +144,11 @@ export async function createUser(formData: FormData): Promise<string> {
   const password = String(formData.get('password') || '');
   const firstName = String(formData.get('first_name') || '').trim();
   const lastName = String(formData.get('last_name') || '').trim();
+  const accessType = String(formData.get('access_type') || 'free');
+  const stripeProductId = String(formData.get('stripe_product_id') || '').trim();
+  const subscriptionPlan = String(formData.get('subscription_plan') || 'monthly') as
+    | 'monthly'
+    | 'annual';
   const subscriptionStatus = String(formData.get('subscription_status') || 'none') as SubscriptionStatus;
   const expiresRaw = String(formData.get('subscription_expires_at') || '');
   const expiresAt = expiresRaw ? new Date(expiresRaw).toISOString() : null;
@@ -165,7 +172,35 @@ export async function createUser(formData: FormData): Promise<string> {
 
   const userId = data.user.id;
 
-  if (subscriptionStatus !== 'none') {
+  if (accessType === 'premium' && stripeProductId) {
+    const stripe = await getStripeClient();
+    await attachStripeSubscription(db, stripe, {
+      userId,
+      email,
+      firstName,
+      lastName,
+      stripeProductId,
+      plan: subscriptionPlan,
+    });
+  } else if (accessType === 'premium') {
+    try {
+      const stripe = await getStripeClient();
+      await createStripeCustomerOnly(db, stripe, { userId, email, firstName, lastName });
+    } catch {
+      /* Stripe optional when no product selected */
+    }
+    if (subscriptionStatus !== 'none') {
+      await db
+        .from('profiles')
+        .update({
+          subscription_status: subscriptionStatus,
+          subscription_expires_at: expiresAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+      await syncSubscriptionRecords(db, userId, subscriptionStatus, expiresAt);
+    }
+  } else if (subscriptionStatus !== 'none') {
     await db
       .from('profiles')
       .update({
@@ -174,13 +209,32 @@ export async function createUser(formData: FormData): Promise<string> {
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
-
     await syncSubscriptionRecords(db, userId, subscriptionStatus, expiresAt);
   }
 
   revalidatePath('/users');
   revalidatePath('/');
   return userId;
+}
+
+export async function suspendUser(userId: string) {
+  const db = createAdminClient();
+  const { data: profile } = await db
+    .from('profiles')
+    .select('stripe_subscription_id')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.stripe_subscription_id) {
+    try {
+      const stripe = await getStripeClient();
+      await stripe.subscriptions.cancel(profile.stripe_subscription_id);
+    } catch {
+      /* profile will still be updated locally */
+    }
+  }
+
+  await revokeUserSubscription(userId);
 }
 
 export async function deleteUser(userId: string) {

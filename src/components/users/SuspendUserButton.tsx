@@ -3,24 +3,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { importLibraryFromPrescriptions } from '@/actions/exercises';
+import { suspendUser } from '@/actions/users';
 import { Button } from '@/components/ui/Button';
 import { useLocale } from '@/i18n/client';
 
-export function ImportPrescriptionsButton() {
+export function SuspendUserButton({ userId }: { userId: string }) {
   const { t } = useLocale();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function onImport() {
+  async function onClick() {
+    if (!window.confirm(t('users.suspendConfirm'))) return;
     setLoading(true);
     try {
-      const count = await importLibraryFromPrescriptions();
-      if (count === 0) {
-        toast.info(t('exercises.importEmpty'));
-        return;
-      }
-      toast.success(t('toast.imported', { count }));
+      await suspendUser(userId);
+      toast.success(t('toast.updated'));
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
@@ -30,8 +27,8 @@ export function ImportPrescriptionsButton() {
   }
 
   return (
-    <Button type="button" variant="secondary" onClick={onImport} disabled={loading}>
-      {loading ? t('exercises.importLoading') : t('exercises.importButton')}
+    <Button type="button" variant="danger" size="sm" disabled={loading} onClick={onClick}>
+      {loading ? t('users.suspending') : t('users.suspend')}
     </Button>
   );
 }

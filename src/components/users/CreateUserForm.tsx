@@ -1,24 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { createUser } from '@/actions/users';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Label, Select } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
+import type { StripeProduct } from '@/lib/types';
 
-export function CreateUserForm() {
+function generatePassword() {
+  const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$';
+  return Array.from({ length: 14 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+export function CreateUserForm({ stripeProducts = [] }: { stripeProducts?: StripeProduct[] }) {
   const { t } = useLocale();
-  const [error, setError] = useState('');
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState(() => generatePassword());
+  const [accessType, setAccessType] = useState<'free' | 'premium'>('free');
+
+  const activeProducts = useMemo(
+    () => stripeProducts.filter((product) => product.active),
+    [stripeProducts]
+  );
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
-    setError('');
     try {
+      formData.set('password', password);
+      formData.set('access_type', accessType);
       const id = await createUser(formData);
-      window.location.href = `/users/${id}`;
+      toast.success(t('toast.created'));
+      router.push(`/users/${id}`);
+      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
       setLoading(false);
     }
   }
@@ -32,11 +51,11 @@ export function CreateUserForm() {
         <div className="grid gap-4 md:grid-cols-2">
           <Field>
             <Label htmlFor="first_name">{t('users.formFirstName')}</Label>
-            <Input id="first_name" name="first_name" />
+            <Input id="first_name" name="first_name" required />
           </Field>
           <Field>
             <Label htmlFor="last_name">{t('users.formLastName')}</Label>
-            <Input id="last_name" name="last_name" />
+            <Input id="last_name" name="last_name" required />
           </Field>
           <Field className="md:col-span-2">
             <Label htmlFor="email">{t('login.email')}</Label>
@@ -44,7 +63,12 @@ export function CreateUserForm() {
           </Field>
           <Field className="md:col-span-2">
             <Label htmlFor="password">{t('users.formPassword')}</Label>
-            <Input id="password" name="password" type="password" minLength={8} required />
+            <div className="flex gap-2">
+              <Input id="password" name="password" type="text" value={password} readOnly required />
+              <Button type="button" variant="secondary" onClick={() => setPassword(generatePassword())}>
+                {t('users.generatePassword')}
+              </Button>
+            </div>
           </Field>
         </div>
       </div>
@@ -55,22 +79,57 @@ export function CreateUserForm() {
         </h3>
         <div className="grid gap-4 md:grid-cols-2">
           <Field>
-            <Label htmlFor="subscription_status">{t('users.subStatus')}</Label>
-            <Select id="subscription_status" name="subscription_status" defaultValue="none">
-              <option value="none">{t('users.subNone')}</option>
-              <option value="trial">{t('users.subTrial')}</option>
-              <option value="active">{t('users.subActive')}</option>
+            <Label htmlFor="access_type">{t('users.accessType')}</Label>
+            <Select
+              id="access_type"
+              name="access_type"
+              value={accessType}
+              onChange={(e) => setAccessType(e.target.value as 'free' | 'premium')}
+            >
+              <option value="free">{t('users.accessFree')}</option>
+              <option value="premium">{t('users.accessPremium')}</option>
             </Select>
           </Field>
-          <Field>
-            <Label htmlFor="subscription_expires_at">{t('users.subExpires')}</Label>
-            <Input id="subscription_expires_at" name="subscription_expires_at" type="datetime-local" />
-          </Field>
+          {accessType === 'premium' && activeProducts.length > 0 ? (
+            <>
+              <Field>
+                <Label htmlFor="stripe_product_id">{t('users.stripeOffer')}</Label>
+                <Select id="stripe_product_id" name="stripe_product_id" defaultValue="">
+                  <option value="">{t('users.manualPremium')}</option>
+                  {activeProducts.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field>
+                <Label htmlFor="subscription_plan">{t('users.planInterval')}</Label>
+                <Select id="subscription_plan" name="subscription_plan" defaultValue="monthly">
+                  <option value="monthly">{t('users.planMonthly')}</option>
+                  <option value="annual">{t('users.planAnnual')}</option>
+                </Select>
+              </Field>
+            </>
+          ) : accessType === 'premium' ? (
+            <>
+              <Field>
+                <Label htmlFor="subscription_status">{t('users.subStatus')}</Label>
+                <Select id="subscription_status" name="subscription_status" defaultValue="active">
+                  <option value="trial">{t('users.subTrial')}</option>
+                  <option value="active">{t('users.subActive')}</option>
+                </Select>
+              </Field>
+              <Field>
+                <Label htmlFor="subscription_expires_at">{t('users.subExpires')}</Label>
+                <Input id="subscription_expires_at" name="subscription_expires_at" type="datetime-local" />
+              </Field>
+            </>
+          ) : null}
         </div>
         <p className="mt-2 text-sm text-muted">{t('users.createHint')}</p>
       </div>
 
-      {error ? <p className="text-sm text-error">{error}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? t('users.creating') : t('users.createSubmit')}
       </Button>

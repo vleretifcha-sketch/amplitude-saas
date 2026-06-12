@@ -7,11 +7,16 @@ import { Card } from '@/components/ui/Card';
 import { createTranslator, getLocale } from '@/i18n';
 import type { Program } from '@/lib/types';
 
+export const revalidate = 30;
+
 export default async function ProgramsPage() {
   const locale = await getLocale();
   const t = createTranslator(locale);
   const db = createAdminClient();
-  const { data } = await db.from('programs').select('*').order('sort_order');
+  const { data } = await db
+    .from('programs')
+    .select('id, title, duration_weeks, is_premium, sort_order')
+    .order('sort_order');
   const programs = (data ?? []) as Program[];
 
   return (

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { revokeUserSubscription, updateUserSubscription } from '@/actions/users';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Label, Select } from '@/components/ui/Input';
@@ -9,7 +11,7 @@ import type { Profile } from '@/lib/types';
 
 export function SubscriptionForm({ profile }: { profile: Profile }) {
   const { t } = useLocale();
-  const [error, setError] = useState('');
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const expiresDefault = profile.subscription_expires_at
@@ -21,12 +23,13 @@ export function SubscriptionForm({ profile }: { profile: Profile }) {
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
-    setError('');
     try {
       await updateUserSubscription(formData);
-      window.location.reload();
+      toast.success(t('toast.subscriptionUpdated'));
+      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
       setLoading(false);
     }
   }
@@ -34,12 +37,13 @@ export function SubscriptionForm({ profile }: { profile: Profile }) {
   async function onRevoke() {
     if (!window.confirm(t('users.revokeConfirm'))) return;
     setRevoking(true);
-    setError('');
     try {
       await revokeUserSubscription(profile.id);
-      window.location.reload();
+      toast.success(t('toast.subscriptionRevoked'));
+      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
       setRevoking(false);
     }
   }
@@ -73,7 +77,6 @@ export function SubscriptionForm({ profile }: { profile: Profile }) {
             />
           </Field>
         </div>
-        {error ? <p className="text-sm text-error">{error}</p> : null}
         <div className="flex flex-wrap gap-3">
           <Button type="submit" disabled={loading || revoking}>
             {loading ? t('users.subUpdating') : t('users.subUpdate')}

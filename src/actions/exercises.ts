@@ -21,6 +21,7 @@ export async function upsertLibraryExercise(formData: FormData): Promise<string>
   const row = {
     id,
     name,
+    description: String(formData.get('description') || '').trim() || null,
     muscle_groups: String(formData.get('muscle_groups') || '') || null,
     vimeo_video_id: vimeo.videoId,
     vimeo_hash: vimeo.hash,

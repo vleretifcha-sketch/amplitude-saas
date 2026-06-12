@@ -1,25 +1,16 @@
 import Link from 'next/link';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { Suspense } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { ExercisesTable } from '@/components/exercises/ExercisesTable';
-import { ImportPrescriptionsButton } from '@/components/exercises/ImportPrescriptionsButton';
+import { TableLoadingSkeleton } from '@/components/ui/PageLoadingSkeleton';
+import { ExercisesTableSection } from '@/components/exercises/ExercisesTableSection';
 import { createTranslator, getLocale } from '@/i18n';
-import type { Exercise } from '@/lib/types';
+
+export const revalidate = 30;
 
 export default async function ExercisesPage() {
-  const t = createTranslator(await getLocale());
-  const db = createAdminClient();
-  const [{ data }, { count: prescriptionCount }, { count: orphanCount }] = await Promise.all([
-    db.from('exercises').select('*').order('name'),
-    db.from('video_exercises').select('*', { count: 'exact', head: true }),
-    db
-      .from('video_exercises')
-      .select('*', { count: 'exact', head: true })
-      .is('library_exercise_id', null),
-  ]);
-  const exercises = (data ?? []) as Exercise[];
+  const locale = await getLocale();
+  const t = createTranslator(locale);
 
   return (
     <div className="space-y-4">
@@ -32,22 +23,9 @@ export default async function ExercisesPage() {
           </Link>
         }
       />
-
-      {exercises.length === 0 && (prescriptionCount ?? 0) > 0 ? (
-        <Card className="space-y-3 border-border bg-surface-elevated">
-          <p className="text-sm text-secondary">{t('exercises.legacyBanner')}</p>
-          <ImportPrescriptionsButton />
-        </Card>
-      ) : null}
-
-      {exercises.length > 0 && (orphanCount ?? 0) > 0 ? (
-        <Card className="text-sm text-secondary">
-          {t('exercises.orphanBanner', { count: orphanCount ?? 0 })}{' '}
-          <ImportPrescriptionsButton />
-        </Card>
-      ) : null}
-
-      <ExercisesTable exercises={exercises} />
+      <Suspense fallback={<TableLoadingSkeleton rows={8} />}>
+        <ExercisesTableSection locale={locale} />
+      </Suspense>
     </div>
   );
 }

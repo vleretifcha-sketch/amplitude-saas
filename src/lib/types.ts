@@ -42,6 +42,7 @@ export type Video = {
 export type Exercise = {
   id: string;
   name: string;
+  description: string | null;
   muscle_groups: string | null;
   vimeo_video_id: string | null;
   vimeo_hash: string | null;
@@ -80,6 +81,9 @@ export type Profile = {
   avatar_url: string | null;
   subscription_status: SubscriptionStatus;
   subscription_expires_at: string | null;
+  subscription_plan: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   current_program_id: string | null;
   onboarding_completed: boolean;
   premium_prompt_count: number;
@@ -138,4 +142,41 @@ export type RecentSubscriptionRow = {
 export type SubscriptionChartRow = {
   started_at: string;
   status: SubscriptionRecordStatus;
+};
+
+export type StripeProduct = {
+  id: string;
+  stripe_product_id: string;
+  stripe_monthly_price_id: string | null;
+  stripe_annual_price_id: string | null;
+  name: string;
+  description: string | null;
+  monthly_price: number | null;
+  annual_price: number | null;
+  trial_days: number | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StripeProductRow = StripeProduct & {
+  activeSubscribers: number;
+};
+
+export type StripePromoCode = {
+  id: string;
+  stripe_product_id: string | null;
+  stripe_coupon_id: string;
+  stripe_promotion_code_id: string;
+  code: string;
+  percent_off: number | null;
+  amount_off: number | null;
+  currency: string | null;
+  duration: 'once' | 'forever' | 'repeating';
+  duration_in_months: number | null;
+  max_redemptions: number | null;
+  redeem_by: string | null;
+  times_redeemed: number;
+  active: boolean;
+  created_at: string;
 };

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { updateUserProfile } from '@/actions/users';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Label } from '@/components/ui/Input';
@@ -9,17 +11,18 @@ import type { Profile } from '@/lib/types';
 
 export function UserProfileForm({ profile }: { profile: Profile }) {
   const { t } = useLocale();
-  const [error, setError] = useState('');
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
-    setError('');
     try {
       await updateUserProfile(formData);
-      window.location.reload();
+      toast.success(t('toast.updated'));
+      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
       setLoading(false);
     }
   }
@@ -37,7 +40,6 @@ export function UserProfileForm({ profile }: { profile: Profile }) {
           <Input id="last_name" name="last_name" defaultValue={profile.last_name ?? ''} />
         </Field>
       </div>
-      {error ? <p className="text-sm text-error">{error}</p> : null}
       <Button type="submit" variant="secondary" size="sm" disabled={loading}>
         {loading ? t('common.saving') : t('users.updateProfile')}
       </Button>

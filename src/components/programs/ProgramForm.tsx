@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { deleteProgram, upsertProgram } from '@/actions/programs';
 import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
 import {
@@ -35,7 +37,7 @@ export function ProgramForm({
   videos?: ProgramVideoOption[];
 }) {
   const { t } = useLocale();
-  const [error, setError] = useState('');
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const currentProgramId = programId ?? program?.id ?? '';
 
@@ -55,12 +57,14 @@ export function ProgramForm({
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
-    setError('');
     try {
       const id = await upsertProgram(formData);
-      window.location.href = `/programs/${id}`;
+      toast.success(program ? t('toast.saved') : t('toast.created'));
+      router.push(`/programs/${id}`);
+      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
       setLoading(false);
     }
   }
@@ -125,7 +129,6 @@ export function ProgramForm({
           <Label htmlFor="is_premium">{t('programs.formPremium')}</Label>
         </Field>
       </div>
-      {error ? <p className="text-sm text-error">{error}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}
       </Button>

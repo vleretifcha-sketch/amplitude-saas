@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { paginate, Pagination } from '@/components/ui/Pagination';
 import { useLocale } from '@/i18n/client';
 import { translateStatus } from '@/i18n/translator';
 import type { Profile, SubscriptionStatus } from '@/lib/types';
@@ -19,6 +20,7 @@ const subTone: Record<SubscriptionStatus, 'success' | 'accent' | 'warning' | 'mu
 export function UsersTable({ users, dateLocale }: { users: Profile[]; dateLocale: string }) {
   const { t } = useLocale();
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -29,12 +31,17 @@ export function UsersTable({ users, dateLocale }: { users: Profile[]; dateLocale
     });
   }, [query, users]);
 
+  const paged = paginate(filtered, page);
+
   return (
     <div className="space-y-4">
       <Input
         type="search"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setPage(1);
+        }}
         placeholder={t('users.searchPlaceholder')}
         aria-label={t('users.searchPlaceholder')}
       />
@@ -45,18 +52,19 @@ export function UsersTable({ users, dateLocale }: { users: Profile[]; dateLocale
               <th className="px-6 py-3">{t('users.colName')}</th>
               <th className="px-6 py-3">{t('users.colEmail')}</th>
               <th className="px-6 py-3">{t('users.colSubscription')}</th>
+              <th className="px-6 py-3">{t('users.colExpires')}</th>
               <th className="px-6 py-3">{t('users.colJoined')}</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {paged.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-muted">
+                <td colSpan={5} className="px-6 py-8 text-center text-muted">
                   {t('users.searchEmpty')}
                 </td>
               </tr>
             ) : (
-              filtered.map((u) => (
+              paged.map((u) => (
                 <tr key={u.id} className="border-b border-border-subtle/60 hover:bg-surface-muted/40">
                   <td className="px-6 py-4">
                     <Link href={`/users/${u.id}`} className="font-medium hover:text-accent">
@@ -70,6 +78,11 @@ export function UsersTable({ users, dateLocale }: { users: Profile[]; dateLocale
                     </Badge>
                   </td>
                   <td className="px-6 py-4 text-muted">
+                    {u.subscription_expires_at
+                      ? new Date(u.subscription_expires_at).toLocaleDateString(dateLocale)
+                      : t('common.dash')}
+                  </td>
+                  <td className="px-6 py-4 text-muted">
                     {new Date(u.created_at).toLocaleDateString(dateLocale)}
                   </td>
                 </tr>
@@ -78,6 +91,7 @@ export function UsersTable({ users, dateLocale }: { users: Profile[]; dateLocale
           </tbody>
         </table>
       </Card>
+      <Pagination page={page} totalItems={filtered.length} onPageChange={setPage} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   Users,
   MessageSquare,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { LanguageSwitcher, useLocale } from '@/i18n/client';
@@ -27,6 +28,7 @@ export function Sidebar() {
     { href: '/exercises', label: t('nav.exercises'), icon: Dumbbell },
     { href: '/users', label: t('nav.users'), icon: Users },
     { href: '/community', label: t('nav.community'), icon: MessageSquare },
+    { href: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
   async function logout() {
@@ -49,6 +51,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              prefetch
               className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors ${
                 active
                   ? 'bg-button text-inverse font-medium'
