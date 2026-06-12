@@ -6,6 +6,7 @@ import { uniqueId } from '@/lib/slug';
 import { resolveImageUrlFromForm } from '@/lib/upload-image';
 import type { ExerciseDraft } from '@/lib/types';
 import { removeVideoIdsFromPrograms } from '@/lib/program-cleanup';
+import { isComplementarySessionType } from '@/lib/video-session';
 
 async function syncProgramSessions(
   db: ReturnType<typeof createAdminClient>,
@@ -47,6 +48,23 @@ async function syncProgramSessions(
         .update({ complementary_session_ids: [...ids, videoId] })
         .eq('id', programId);
     }
+    return;
+  }
+
+  if (type === 'mobility') {
+    const { data: program } = await db
+      .from('programs')
+      .select('mobility_session_ids')
+      .eq('id', programId)
+      .single();
+
+    const ids = program?.mobility_session_ids ?? [];
+    if (!ids.includes(videoId)) {
+      await db
+        .from('programs')
+        .update({ mobility_session_ids: [...ids, videoId] })
+        .eq('id', programId);
+    }
   }
 }
 
@@ -68,7 +86,7 @@ async function syncVideoExercises(
   type: string,
   exercises: ExerciseDraft[]
 ) {
-  if (type !== 'complementary') {
+  if (!isComplementarySessionType(type)) {
     await db.from('video_exercises').delete().eq('video_id', videoId);
     return;
   }
@@ -134,10 +152,16 @@ export async function upsertVideo(formData: FormData): Promise<string> {
     program_id: programId,
     title,
     description: String(formData.get('description') || '') || null,
-    duration_seconds: Number(formData.get('duration_seconds') || 0),
+    duration_seconds: isComplementarySessionType(type)
+      ? 0
+      : Number(formData.get('duration_seconds') || 0),
     thumbnail_url: thumbnailUrl,
-    vimeo_video_id: String(formData.get('vimeo_video_id')),
-    vimeo_hash: String(formData.get('vimeo_hash') || '') || null,
+    vimeo_video_id: isComplementarySessionType(type)
+      ? String(formData.get('vimeo_video_id') || '').trim() || 'none'
+      : String(formData.get('vimeo_video_id')).trim(),
+    vimeo_hash: isComplementarySessionType(type)
+      ? null
+      : String(formData.get('vimeo_hash') || '') || null,
     type,
     week_number: Number(formData.get('week_number') || 1),
     order_in_week: Number(formData.get('order_in_week') || 1),

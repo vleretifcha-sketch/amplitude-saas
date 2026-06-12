@@ -24,6 +24,7 @@ export async function upsertProgram(formData: FormData): Promise<string> {
   const title = String(formData.get('title')).trim();
   const signatureSessionIds = parseIdList(formData.get('signature_session_ids'));
   const complementarySessionIds = parseIdList(formData.get('complementary_session_ids'));
+  const mobilitySessionIds = parseIdList(formData.get('mobility_session_ids'));
 
   const id = existingId || (await uniqueId(db, 'programs', 'prog-', title));
   const coverImageUrl = await resolveImageUrlFromForm(formData, {
@@ -49,7 +50,12 @@ export async function upsertProgram(formData: FormData): Promise<string> {
   };
 
   const rowWithSignatures = { ...baseRow, signature_session_ids: signatureSessionIds };
-  let { error } = await db.from('programs').upsert(rowWithSignatures);
+  const rowWithMobility = { ...rowWithSignatures, mobility_session_ids: mobilitySessionIds };
+  let { error } = await db.from('programs').upsert(rowWithMobility);
+
+  if (error?.message.includes('mobility_session_ids')) {
+    ({ error } = await db.from('programs').upsert(rowWithSignatures));
+  }
 
   if (error?.message.includes('signature_session_ids')) {
     ({ error } = await db.from('programs').upsert(baseRow));
@@ -61,7 +67,7 @@ export async function upsertProgram(formData: FormData): Promise<string> {
 
   if (error) throw new Error(error.message);
 
-  const selectedVideoIds = [...signatureSessionIds, ...complementarySessionIds];
+  const selectedVideoIds = [...signatureSessionIds, ...mobilitySessionIds, ...complementarySessionIds];
   if (selectedVideoIds.length > 0) {
     const { error: videoError } = await db
       .from('videos')

@@ -123,7 +123,8 @@ export async function runContentSync(): Promise<SyncReport> {
           : []
     );
     const complementaryIds = parseIdList(program.complementary_session_ids);
-    const sessionIds = [...signatureIds, ...complementaryIds];
+    const mobilityIds = parseIdList(program.mobility_session_ids);
+    const sessionIds = [...signatureIds, ...mobilityIds, ...complementaryIds];
 
     if (signatureIds.length) {
       await db

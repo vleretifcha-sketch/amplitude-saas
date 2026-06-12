@@ -57,6 +57,7 @@ export function VideosTable({ videos }: { videos: VideoRow[] }) {
 
   const typeLabel: Record<Video['type'], string> = {
     signature: t('videos.typeSignature'),
+    mobility: t('videos.typeMobility'),
     complementary: t('videos.typeComplementary'),
   };
 

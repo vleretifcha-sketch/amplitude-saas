@@ -1,0 +1,68 @@
+export type CropArea = {
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+};
+
+export const IMAGE_CROP_ASPECT = {
+  programCover: 4 / 3,
+  sessionThumbnail: 1,
+} as const;
+
+function createImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', reject);
+    image.crossOrigin = 'anonymous';
+    image.src = url;
+  });
+}
+
+export async function getCroppedImageBlob(
+  imageSrc: string,
+  pixelCrop: CropArea,
+  outputType: 'image/jpeg' | 'image/png' = 'image/jpeg',
+  quality = 0.92
+): Promise<Blob> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas not supported');
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Crop failed'))),
+      outputType,
+      quality
+    );
+  });
+}
+
+export function croppedFileName(originalName: string, mimeType: string): string {
+  const base = originalName.replace(/\.[^.]+$/, '') || 'image';
+  const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+  return `${base}-cropped.${ext}`;
+}
+
+export function assignFileToInput(input: HTMLInputElement, file: File) {
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(file);
+  input.files = dataTransfer.files;
+}

@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Label, Textarea } from '@/components/ui/Input';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { IMAGE_CROP_ASPECT } from '@/lib/crop-image';
 import { useLocale } from '@/i18n/client';
 import type { Program } from '@/lib/types';
 
@@ -54,6 +55,8 @@ export function ProgramForm({
   const complementaryIds = program
     ? idsForProgram(program.complementary_session_ids, null, videos, currentProgramId, 'complementary')
     : [];
+
+  const mobilityIds = program?.mobility_session_ids?.filter(Boolean) ?? [];
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
@@ -103,6 +106,7 @@ export function ProgramForm({
           urlFieldName="cover_image_url"
           fileFieldName="cover_image_file"
           defaultUrl={program?.cover_image_url}
+          cropAspect={IMAGE_CROP_ASPECT.programCover}
         />
         <Field>
           <Label htmlFor="tagline">{t('programs.formTagline')}</Label>
@@ -114,6 +118,7 @@ export function ProgramForm({
             programId={currentProgramId}
             signatureIds={signatureIds}
             complementaryIds={complementaryIds}
+            mobilityIds={mobilityIds}
             videos={videos}
           />
         ) : null}

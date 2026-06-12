@@ -102,6 +102,14 @@ export const fr = {
     complementaryHint:
       'Choisis dans tout le catalogue. Les trainings sélectionnés seront rattachés à cette méthode.',
     complementaryEmpty: 'Aucun training dans le catalogue. Créez-en dans Cours & Trainings.',
+    mobilityTitle: 'Mobilité / Échauffement',
+    mobilityHint:
+      'Vidéos courtes avant ou après la séance. Choisis dans le catalogue — pas d’exercices à prescrire.',
+    mobilityOptionalLabel: 'Inclure une séance Mobilité / Échauffement',
+    mobilityOptionalHint:
+      'Optionnel — placée après le cours guidé et avant les trainings complémentaires.',
+    mobilityChoose: 'Choisir une vidéo…',
+    mobilityEmpty: 'Aucune vidéo mobilité dans le catalogue. Créez-en dans Cours & Trainings.',
     catalogCount: '{{count}} séance disponible dans le catalogue.',
     catalogCountPlural: '{{count}} séances disponibles dans le catalogue.',
     migrationError:
@@ -113,7 +121,7 @@ export const fr = {
   videos: {
     title: 'Séances',
     description:
-      'Cours guidés et trainings. Pour un training, définissez les exercices, séries et répétitions dans la fiche séance.',
+      'Cours guidés, mobilité/échauffement (vidéo seule) et trainings complémentaires (exercices depuis la banque).',
     new: 'Nouvelle séance',
     colTitle: 'Titre',
     colProgram: 'Méthode',
@@ -122,6 +130,7 @@ export const fr = {
     colExercises: 'Exercices',
     colWeek: 'Sem.',
     typeSignature: 'Cours guidé',
+    typeMobility: 'Mobilité / Échauffement',
     typeComplementary: 'Training',
     importLegacy: 'À importer ({{count}} exercice)',
     importLegacyPlural: 'À importer ({{count}} exercices)',
@@ -139,10 +148,17 @@ export const fr = {
     formThumbnail: 'Miniature',
     formDescription: 'Description',
     typeOptionSignature: 'Signature (cours guidé)',
+    typeOptionMobility: 'Mobilité / Échauffement',
     typeOptionComplementary: 'Complémentaire (training)',
     statusDraft: 'Brouillon',
     statusPublished: 'Publié',
     statusArchived: 'Archivé',
+    mobilityOnlyHint:
+      'Mobilité / échauffement : une vidéo seule, sans exercices. Ajoutez l’ID Vimeo et publiez.',
+    signatureOnlyHint:
+      'Un cours guidé signature est une vidéo seule — pas d’exercices à prescrire. Ajoutez l’ID Vimeo et publiez.',
+    complementaryOnlyHint:
+      'Un training complémentaire n’a pas de vidéo de séance. Choisissez les exercices ci-dessous : leurs vidéos viennent de la banque d’exercices.',
     prescriptionTitle: 'Prescription du training',
     prescriptionHint:
       'Choisissez des exercices depuis la banque, puis définissez séries et répétitions.',
@@ -350,8 +366,13 @@ export const fr = {
   },
   upload: {
     choose: 'Choisir une image',
+    recrop: 'Recadrer',
     cancel: 'Annuler',
     hint: 'JPG, PNG, WebP ou GIF · max 5 Mo',
+    cropTitle: 'Recadrer l’image',
+    cropHint: 'Déplace et zoome pour cadrer la zone visible.',
+    cropZoom: 'Zoom',
+    cropConfirm: 'Appliquer le recadrage',
     unsupportedFormat: 'Format non supporté. Utilisez JPG, PNG, WebP ou GIF.',
     tooLarge: 'Image trop lourde (max 5 Mo).',
     bucketMissing: 'Bucket Supabase manquant : exécute 009_content_images_storage.sql ({{message}})',

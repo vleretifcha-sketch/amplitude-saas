@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/Button';
 import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
 import { Field, Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { IMAGE_CROP_ASPECT } from '@/lib/crop-image';
 import { ExerciseListEditor } from '@/components/videos/ExerciseListEditor';
 import { useLocale } from '@/i18n/client';
+import { isComplementarySessionType, isVideoOnlySessionType } from '@/lib/video-session';
 import type { Exercise, Program, Video, VideoExercise } from '@/lib/types';
 
 export function VideoForm({
@@ -69,26 +71,40 @@ export function VideoForm({
             onChange={(e) => setType(e.target.value as Video['type'])}
           >
             <option value="signature">{t('videos.typeOptionSignature')}</option>
+            <option value="mobility">{t('videos.typeOptionMobility')}</option>
             <option value="complementary">{t('videos.typeOptionComplementary')}</option>
           </Select>
         </Field>
-        <Field>
-          <Label htmlFor="vimeo_video_id">{t('videos.formVimeoId')}</Label>
-          <Input id="vimeo_video_id" name="vimeo_video_id" defaultValue={video?.vimeo_video_id} required />
-        </Field>
-        <Field>
-          <Label htmlFor="vimeo_hash">{t('videos.formVimeoHash')}</Label>
-          <Input id="vimeo_hash" name="vimeo_hash" defaultValue={video?.vimeo_hash ?? ''} />
-        </Field>
-        <Field>
-          <Label htmlFor="duration_seconds">{t('videos.formDuration')}</Label>
-          <Input
-            id="duration_seconds"
-            name="duration_seconds"
-            type="number"
-            defaultValue={video?.duration_seconds ?? 0}
-          />
-        </Field>
+        {isVideoOnlySessionType(type) ? (
+          <>
+            <Field>
+              <Label htmlFor="vimeo_video_id">{t('videos.formVimeoId')}</Label>
+              <Input id="vimeo_video_id" name="vimeo_video_id" defaultValue={video?.vimeo_video_id} required />
+            </Field>
+            <Field>
+              <Label htmlFor="vimeo_hash">{t('videos.formVimeoHash')}</Label>
+              <Input id="vimeo_hash" name="vimeo_hash" defaultValue={video?.vimeo_hash ?? ''} />
+            </Field>
+            <Field>
+              <Label htmlFor="duration_seconds">{t('videos.formDuration')}</Label>
+              <Input
+                id="duration_seconds"
+                name="duration_seconds"
+                type="number"
+                defaultValue={video?.duration_seconds ?? 0}
+              />
+            </Field>
+          </>
+        ) : (
+          <>
+            <input type="hidden" name="vimeo_video_id" value="" />
+            <input type="hidden" name="vimeo_hash" value="" />
+            <input type="hidden" name="duration_seconds" value="0" />
+            <div className="rounded-[var(--radius-input)] border border-border-subtle bg-surface-elevated p-4 md:col-span-2">
+              <p className="text-sm text-secondary">{t('videos.complementaryOnlyHint')}</p>
+            </div>
+          </>
+        )}
         <Field>
           <Label htmlFor="status">{t('videos.formStatus')}</Label>
           <Select id="status" name="status" defaultValue={video?.status ?? 'draft'}>
@@ -116,13 +132,22 @@ export function VideoForm({
           urlFieldName="thumbnail_url"
           fileFieldName="thumbnail_file"
           defaultUrl={video?.thumbnail_url}
+          cropAspect={IMAGE_CROP_ASPECT.sessionThumbnail}
         />
         <Field className="md:col-span-2">
           <Label htmlFor="description">{t('videos.formDescription')}</Label>
           <Textarea id="description" name="description" rows={3} defaultValue={video?.description ?? ''} />
         </Field>
 
-        <ExerciseListEditor library={library} initialExercises={exercises} />
+        {isComplementarySessionType(type) ? (
+          <ExerciseListEditor library={library} initialExercises={exercises} />
+        ) : (
+          <div className="rounded-[var(--radius-input)] border border-border-subtle bg-surface-elevated p-4 md:col-span-2">
+            <p className="text-sm text-secondary">
+              {type === 'mobility' ? t('videos.mobilityOnlyHint') : t('videos.signatureOnlyHint')}
+            </p>
+          </div>
+        )}
       </div>
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}

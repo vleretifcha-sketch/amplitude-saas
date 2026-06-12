@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VideosTable, type VideoRow } from '@/components/videos/VideosTable';
 import { createTranslator } from '@/i18n';
+import { isComplementarySessionType } from '@/lib/video-session';
 import type { Video } from '@/lib/types';
 
 type VideoListRow = Pick<
@@ -39,8 +40,7 @@ export async function VideosTableSection({ locale }: { locale: 'fr' | 'en' }) {
     const legacyCount = legacyCountByVideo[video.id] ?? 0;
     const linkedCount = exerciseCountByVideo[video.id] ?? 0;
     const programRelation = Array.isArray(video.programs) ? video.programs[0] : video.programs;
-    const exerciseLabel =
-      video.type === 'complementary'
+    const exerciseLabel = isComplementarySessionType(video.type)
         ? legacyCount
           ? t(legacyCount > 1 ? 'videos.importLegacyPlural' : 'videos.importLegacy', {
               count: legacyCount,
@@ -62,7 +62,7 @@ export async function VideosTableSection({ locale }: { locale: 'fr' | 'en' }) {
       updated_at: '',
       programTitle: programRelation?.title ?? video.program_id,
       exerciseLabel,
-      exerciseCount: video.type === 'complementary' ? legacyCount || linkedCount : 0,
+      exerciseCount: isComplementarySessionType(video.type) ? legacyCount || linkedCount : 0,
     };
   });
 

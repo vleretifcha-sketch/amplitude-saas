@@ -1,5 +1,5 @@
 export type VideoStatus = 'draft' | 'published' | 'archived';
-export type VideoType = 'signature' | 'complementary';
+export type VideoType = 'signature' | 'complementary' | 'mobility';
 export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'none';
 export type SubscriptionRecordStatus = 'active' | 'cancelled' | 'expired' | 'grace_period';
 
@@ -15,6 +15,7 @@ export type Program = {
   signature_session_id: string | null;
   signature_session_ids: string[];
   complementary_session_ids: string[];
+  mobility_session_ids?: string[];
   is_premium: boolean;
   sort_order: number;
   created_at: string;

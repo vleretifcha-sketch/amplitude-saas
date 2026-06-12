@@ -104,6 +104,14 @@ export const en: Dictionary = {
     complementaryHint:
       'Pick from the full catalog. Selected trainings will be linked to this program.',
     complementaryEmpty: 'No training in the catalog. Create one in Classes & Trainings.',
+    mobilityTitle: 'Mobility / Warm-up',
+    mobilityHint:
+      'Short videos before or after the session. Pick from the catalog — no exercises to prescribe.',
+    mobilityOptionalLabel: 'Include a Mobility / Warm-up session',
+    mobilityOptionalHint:
+      'Optional — shown after the guided class and before complementary trainings.',
+    mobilityChoose: 'Choose a video…',
+    mobilityEmpty: 'No mobility video in the catalog. Create one in Classes & Trainings.',
     catalogCount: '{{count}} session available in the catalog.',
     catalogCountPlural: '{{count}} sessions available in the catalog.',
     migrationError:
@@ -115,7 +123,7 @@ export const en: Dictionary = {
   videos: {
     title: 'Sessions',
     description:
-      'Guided classes and trainings. For a training, set exercises, sets and reps in the session page.',
+      'Guided classes, mobility/warm-up (video only), and complementary trainings (exercises from the library).',
     new: 'New session',
     colTitle: 'Title',
     colProgram: 'Program',
@@ -124,6 +132,7 @@ export const en: Dictionary = {
     colExercises: 'Exercises',
     colWeek: 'Wk.',
     typeSignature: 'Guided class',
+    typeMobility: 'Mobility / Warm-up',
     typeComplementary: 'Training',
     importLegacy: 'To import ({{count}} exercise)',
     importLegacyPlural: 'To import ({{count}} exercises)',
@@ -141,10 +150,17 @@ export const en: Dictionary = {
     formThumbnail: 'Thumbnail',
     formDescription: 'Description',
     typeOptionSignature: 'Signature (guided class)',
+    typeOptionMobility: 'Mobility / Warm-up',
     typeOptionComplementary: 'Complementary (training)',
     statusDraft: 'Draft',
     statusPublished: 'Published',
     statusArchived: 'Archived',
+    mobilityOnlyHint:
+      'Mobility / warm-up: a video only, no exercises. Add the Vimeo ID and publish.',
+    signatureOnlyHint:
+      'A signature guided class is a video only — no exercises to prescribe. Add the Vimeo ID and publish.',
+    complementaryOnlyHint:
+      'A complementary training has no session video. Pick exercises below — their videos come from the exercise library.',
     prescriptionTitle: 'Training prescription',
     prescriptionHint: 'Choose exercises from the library, then set sets and reps.',
     exerciseField: 'Exercise',
@@ -350,8 +366,13 @@ export const en: Dictionary = {
   },
   upload: {
     choose: 'Choose an image',
+    recrop: 'Crop',
     cancel: 'Cancel',
     hint: 'JPG, PNG, WebP or GIF · max 5 MB',
+    cropTitle: 'Crop image',
+    cropHint: 'Drag and zoom to frame the visible area.',
+    cropZoom: 'Zoom',
+    cropConfirm: 'Apply crop',
     unsupportedFormat: 'Unsupported format. Use JPG, PNG, WebP or GIF.',
     tooLarge: 'Image too large (max 5 MB).',
     bucketMissing: 'Missing Supabase bucket: run 009_content_images_storage.sql ({{message}})',

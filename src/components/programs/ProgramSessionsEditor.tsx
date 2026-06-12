@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Field, Label, Select } from '@/components/ui/Input';
+import { OptionalMobilitySession } from '@/components/programs/OptionalMobilitySession';
 import { useLocale } from '@/i18n/client';
 import type { Video } from '@/lib/types';
 
@@ -118,15 +119,18 @@ export function ProgramSessionsEditor({
   programId,
   signatureIds,
   complementaryIds,
+  mobilityIds,
   videos,
 }: {
   programId: string;
   signatureIds: string[];
   complementaryIds: string[];
+  mobilityIds: string[];
   videos: ProgramVideoOption[];
 }) {
   const { t } = useLocale();
   const signatureVideos = videos.filter((v) => v.type === 'signature');
+  const mobilityVideos = videos.filter((v) => v.type === 'mobility');
   const complementaryVideos = videos.filter((v) => v.type === 'complementary');
 
   return (
@@ -139,6 +143,12 @@ export function ProgramSessionsEditor({
         initialIds={signatureIds}
         options={signatureVideos}
         emptyMessage={t('programs.signatureEmpty')}
+      />
+
+      <OptionalMobilitySession
+        programId={programId}
+        initialIds={mobilityIds}
+        options={mobilityVideos}
       />
 
       <SessionList

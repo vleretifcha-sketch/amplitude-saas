@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -63,6 +63,52 @@ function emptyRow(order: number): ExerciseRow {
 
 function withOrder(items: ExerciseRow[]): ExerciseRow[] {
   return items.map((ex, i) => ({ ...ex, sort_order: i + 1 }));
+}
+
+function NumberFieldInput({
+  id,
+  value,
+  min = 1,
+  onChange,
+}: {
+  id: string;
+  value: number;
+  min?: number;
+  onChange: (value: number) => void;
+}) {
+  const [text, setText] = useState(String(value));
+
+  useEffect(() => {
+    setText(String(value));
+  }, [value]);
+
+  return (
+    <Input
+      id={id}
+      type="number"
+      min={min}
+      value={text}
+      onChange={(event) => {
+        const raw = event.target.value;
+        setText(raw);
+        if (raw !== '') {
+          const parsed = Number(raw);
+          if (!Number.isNaN(parsed)) onChange(parsed);
+        }
+      }}
+      onBlur={() => {
+        const parsed = Number(text);
+        if (text === '' || Number.isNaN(parsed)) {
+          setText(String(min));
+          onChange(min);
+          return;
+        }
+        const clamped = Math.max(min, parsed);
+        setText(String(clamped));
+        onChange(clamped);
+      }}
+    />
+  );
 }
 
 function toPayload(items: ExerciseRow[]): ExerciseDraft[] {
@@ -142,22 +188,18 @@ function SortableExerciseRow({
       </Field>
       <Field className="md:col-span-2">
         <Label htmlFor={`exercise-sets-${exercise.rowKey}`}>{t('videos.setsField')}</Label>
-        <Input
+        <NumberFieldInput
           id={`exercise-sets-${exercise.rowKey}`}
-          type="number"
-          min={1}
           value={exercise.target_sets}
-          onChange={(e) => onUpdate({ target_sets: Number(e.target.value) || 1 })}
+          onChange={(target_sets) => onUpdate({ target_sets })}
         />
       </Field>
       <Field className="md:col-span-2">
         <Label htmlFor={`exercise-reps-${exercise.rowKey}`}>{t('videos.repsField')}</Label>
-        <Input
+        <NumberFieldInput
           id={`exercise-reps-${exercise.rowKey}`}
-          type="number"
-          min={1}
           value={exercise.target_reps}
-          onChange={(e) => onUpdate({ target_reps: Number(e.target.value) || 1 })}
+          onChange={(target_reps) => onUpdate({ target_reps })}
         />
       </Field>
       <Field className="md:col-span-2">
