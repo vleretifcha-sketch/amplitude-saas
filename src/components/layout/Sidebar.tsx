@@ -8,12 +8,12 @@ import {
   PlayCircle,
   Dumbbell,
   Users,
-  CreditCard,
   MessageSquare,
   LogOut,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { LanguageSwitcher, useLocale } from '@/i18n/client';
+import { AmplitudeLogo } from '@/components/layout/AmplitudeLogo';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -26,7 +26,6 @@ export function Sidebar() {
     { href: '/videos', label: t('nav.videos'), icon: PlayCircle },
     { href: '/exercises', label: t('nav.exercises'), icon: Dumbbell },
     { href: '/users', label: t('nav.users'), icon: Users },
-    { href: '/subscriptions', label: t('nav.subscriptions'), icon: CreditCard },
     { href: '/community', label: t('nav.community'), icon: MessageSquare },
   ];
 
@@ -38,10 +37,10 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-border-subtle bg-surface px-4 py-6">
+    <aside className="flex h-full w-[17rem] shrink-0 flex-col overflow-y-auto border-r border-border-subtle bg-surface px-4 py-6">
       <div className="mb-8 px-2">
-        <p className="text-xs uppercase tracking-widest text-muted">Amplitude</p>
-        <p className="text-lg font-semibold text-accent">{t('nav.admin')}</p>
+        <AmplitudeLogo className="h-10 w-auto" priority />
+        <p className="mt-2 text-sm font-medium text-muted">{t('nav.admin')}</p>
       </div>
       <nav className="flex flex-1 flex-col gap-1">
         {nav.map(({ href, label, icon: Icon }) => {
@@ -56,8 +55,8 @@ export function Sidebar() {
                   : 'text-secondary hover:bg-surface-muted hover:text-foreground'
               }`}
             >
-              <Icon size={18} />
-              {label}
+              <Icon size={18} className="shrink-0" />
+              <span className="min-w-0 leading-snug">{label}</span>
             </Link>
           );
         })}

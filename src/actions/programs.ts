@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { slugify, uniqueId } from '@/lib/slug';
 import { resolveImageUrlFromForm } from '@/lib/upload-image';
 import { createTranslator, getLocale } from '@/i18n';
+import { removeVideoIdsFromPrograms } from '@/lib/program-cleanup';
 
 function parseIdList(raw: FormDataEntryValue | null): string[] {
   if (!raw) return [];
@@ -78,7 +79,15 @@ export async function upsertProgram(formData: FormData): Promise<string> {
 
 export async function deleteProgram(id: string) {
   const db = createAdminClient();
+  const { data: videos } = await db.from('videos').select('id').eq('program_id', id);
+  const videoIds = (videos ?? []).map((row) => row.id);
+
+  await removeVideoIdsFromPrograms(db, videoIds);
+
   const { error } = await db.from('programs').delete().eq('id', id);
   if (error) throw new Error(error.message);
+
   revalidatePath('/programs');
+  revalidatePath('/videos');
+  revalidatePath('/');
 }

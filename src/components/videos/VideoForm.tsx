@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { upsertVideo } from '@/actions/videos';
+import { deleteVideo, upsertVideo } from '@/actions/videos';
 import { Button } from '@/components/ui/Button';
+import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
 import { Field, Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { ExerciseListEditor } from '@/components/videos/ExerciseListEditor';
@@ -125,6 +126,14 @@ export function VideoForm({
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}
       </Button>
+      {video ? (
+        <DeleteResourceButton
+          label={t('videos.delete')}
+          confirmMessage={t('videos.deleteConfirm', { name: video.title })}
+          redirectTo="/videos"
+          onDelete={() => deleteVideo(video.id)}
+        />
+      ) : null}
     </form>
   );
 }

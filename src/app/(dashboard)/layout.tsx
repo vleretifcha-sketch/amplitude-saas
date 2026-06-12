@@ -32,9 +32,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <LocaleProvider initialLocale={locale}>
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-auto p-8">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto p-8">{children}</main>
       </div>
     </LocaleProvider>
   );

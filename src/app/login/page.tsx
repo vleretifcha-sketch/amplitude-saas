@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Field, Input, Label } from '@/components/ui/Input';
 import { LanguageSwitcher, useLocale } from '@/i18n/client';
+import { AmplitudeLogo } from '@/components/layout/AmplitudeLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,8 +51,8 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-widest text-muted">Amplitude</p>
-            <h1 className="mt-1 text-2xl font-semibold text-accent">{t('nav.admin')}</h1>
+            <AmplitudeLogo className="h-12 w-auto" priority />
+            <h1 className="mt-3 text-2xl font-semibold text-accent">{t('nav.admin')}</h1>
             <p className="mt-2 text-sm text-secondary">{t('login.subtitle')}</p>
           </div>
           <LanguageSwitcher className="shrink-0" />

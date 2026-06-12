@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { upsertLibraryExercise } from '@/actions/exercises';
+import { deleteLibraryExercise, upsertLibraryExercise } from '@/actions/exercises';
 import { Button } from '@/components/ui/Button';
+import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
 import { Field, Input, Label } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
 import type { Exercise } from '@/lib/types';
+import { buildVimeoWatchUrl } from '@/lib/vimeo';
 
 export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
   const { t } = useLocale();
@@ -53,7 +55,7 @@ export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
             id="vimeo_video_id"
             name="vimeo_video_id"
             defaultValue={exercise?.vimeo_video_id ?? ''}
-            placeholder="123456789"
+            placeholder={t('exercises.placeholderVimeoId')}
             required
           />
         </Field>
@@ -63,21 +65,22 @@ export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
             id="vimeo_hash"
             name="vimeo_hash"
             defaultValue={exercise?.vimeo_hash ?? ''}
-            placeholder="abc123"
+            placeholder={t('exercises.placeholderVimeoHash')}
           />
         </Field>
       </div>
+      <p className="text-sm text-muted">{t('exercises.vimeoUrlHint')}</p>
       <p className="text-sm text-muted">{t('exercises.formHint')}</p>
       {exercise?.vimeo_video_id ? (
         <p className="text-sm text-secondary">
           {t('exercises.vimeoPreview')}{' '}
           <a
-            href={`https://vimeo.com/${exercise.vimeo_video_id}`}
+            href={buildVimeoWatchUrl(exercise.vimeo_video_id, exercise.vimeo_hash)}
             target="_blank"
             rel="noreferrer"
             className="text-accent underline"
           >
-            vimeo.com/{exercise.vimeo_video_id}
+            {buildVimeoWatchUrl(exercise.vimeo_video_id, exercise.vimeo_hash)}
           </a>
         </p>
       ) : null}
@@ -85,6 +88,14 @@ export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}
       </Button>
+      {exercise ? (
+        <DeleteResourceButton
+          label={t('exercises.delete')}
+          confirmMessage={t('exercises.deleteConfirm', { name: exercise.name })}
+          redirectTo="/exercises"
+          onDelete={() => deleteLibraryExercise(exercise.id)}
+        />
+      ) : null}
     </form>
   );
 }

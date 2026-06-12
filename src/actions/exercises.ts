@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { uniqueId } from '@/lib/slug';
 import { createTranslator, getLocale } from '@/i18n';
+import { parseVimeoFields } from '@/lib/vimeo';
 
 export async function upsertLibraryExercise(formData: FormData): Promise<string> {
   const db = createAdminClient();
@@ -12,12 +13,17 @@ export async function upsertLibraryExercise(formData: FormData): Promise<string>
 
   const id = existingId || (await uniqueId(db, 'exercises', 'ex-', name));
 
+  const vimeo = parseVimeoFields(
+    String(formData.get('vimeo_video_id') || ''),
+    String(formData.get('vimeo_hash') || '') || null
+  );
+
   const row = {
     id,
     name,
     muscle_groups: String(formData.get('muscle_groups') || '') || null,
-    vimeo_video_id: String(formData.get('vimeo_video_id') || '').trim(),
-    vimeo_hash: String(formData.get('vimeo_hash') || '').trim() || null,
+    vimeo_video_id: vimeo.videoId,
+    vimeo_hash: vimeo.hash,
     updated_at: new Date().toISOString(),
   };
 
@@ -55,6 +61,8 @@ export async function deleteLibraryExercise(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath('/exercises');
+  revalidatePath('/videos');
+  revalidatePath('/');
 }
 
 export async function importLibraryFromPrescriptions(): Promise<number> {

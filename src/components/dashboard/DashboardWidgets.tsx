@@ -189,7 +189,7 @@ export function RecentSubscriptionsList({
     <Card>
       <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className="text-lg font-medium">{t('dashboard.recentSubscriptions')}</h2>
-        <Link href="/subscriptions" className="text-sm text-accent hover:underline">
+        <Link href="/users" className="text-sm text-accent hover:underline">
           {t('dashboard.viewAllSubscriptions')}
         </Link>
       </div>

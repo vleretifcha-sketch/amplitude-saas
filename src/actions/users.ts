@@ -4,6 +4,59 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { SubscriptionStatus } from '@/lib/types';
 
+async function syncSubscriptionRecords(
+  db: ReturnType<typeof createAdminClient>,
+  userId: string,
+  status: SubscriptionStatus,
+  expiresAt: string | null
+) {
+  if (status === 'active' && expiresAt) {
+    const { error: subError } = await db.from('subscriptions').upsert(
+      {
+        user_id: userId,
+        product_id: 'amplitude_premium_monthly',
+        status: 'active',
+        price_monthly: 39,
+        currency: 'EUR',
+        expires_at: expiresAt,
+        started_at: new Date().toISOString(),
+        cancelled_at: null,
+      },
+      { onConflict: 'user_id,product_id' }
+    );
+    if (subError) throw new Error(subError.message);
+    return;
+  }
+
+  if (status === 'trial' && expiresAt) {
+    const { error: subError } = await db.from('subscriptions').upsert(
+      {
+        user_id: userId,
+        product_id: 'amplitude_premium_monthly',
+        status: 'grace_period',
+        price_monthly: 39,
+        currency: 'EUR',
+        expires_at: expiresAt,
+        started_at: new Date().toISOString(),
+        cancelled_at: null,
+      },
+      { onConflict: 'user_id,product_id' }
+    );
+    if (subError) throw new Error(subError.message);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  await db
+    .from('subscriptions')
+    .update({
+      status: 'expired',
+      expires_at: now,
+      cancelled_at: now,
+    })
+    .eq('user_id', userId);
+}
+
 export async function updateUserSubscription(formData: FormData) {
   const db = createAdminClient();
   const userId = String(formData.get('user_id'));
@@ -22,29 +75,39 @@ export async function updateUserSubscription(formData: FormData) {
 
   if (profileError) throw new Error(profileError.message);
 
-  if (status === 'active' && expiresAt) {
-    const { error: subError } = await db.from('subscriptions').upsert(
-      {
-        user_id: userId,
-        product_id: 'amplitude_premium_monthly',
-        status: 'active',
-        price_monthly: 39,
-        currency: 'EUR',
-        expires_at: expiresAt,
-        started_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,product_id' }
-    );
-    if (subError) throw new Error(subError.message);
-  }
-
-  if (status === 'expired' || status === 'none') {
-    await db.from('subscriptions').update({ status: 'expired' }).eq('user_id', userId);
-  }
+  await syncSubscriptionRecords(db, userId, status, expiresAt);
 
   revalidatePath('/users');
   revalidatePath(`/users/${userId}`);
-  revalidatePath('/subscriptions');
+  revalidatePath('/');
+}
+
+export async function revokeUserSubscription(userId: string) {
+  const db = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { error: profileError } = await db
+    .from('profiles')
+    .update({
+      subscription_status: 'none',
+      subscription_expires_at: null,
+      updated_at: now,
+    })
+    .eq('id', userId);
+
+  if (profileError) throw new Error(profileError.message);
+
+  await db
+    .from('subscriptions')
+    .update({
+      status: 'cancelled',
+      cancelled_at: now,
+      expires_at: now,
+    })
+    .eq('user_id', userId);
+
+  revalidatePath('/users');
+  revalidatePath(`/users/${userId}`);
   revalidatePath('/');
 }
 
@@ -79,6 +142,9 @@ export async function createUser(formData: FormData): Promise<string> {
   const password = String(formData.get('password') || '');
   const firstName = String(formData.get('first_name') || '').trim();
   const lastName = String(formData.get('last_name') || '').trim();
+  const subscriptionStatus = String(formData.get('subscription_status') || 'none') as SubscriptionStatus;
+  const expiresRaw = String(formData.get('subscription_expires_at') || '');
+  const expiresAt = expiresRaw ? new Date(expiresRaw).toISOString() : null;
 
   if (!email || password.length < 8) {
     throw new Error('Email and password (min 8 characters) are required.');
@@ -97,7 +163,31 @@ export async function createUser(formData: FormData): Promise<string> {
   if (error) throw new Error(error.message);
   if (!data.user) throw new Error('User creation failed.');
 
+  const userId = data.user.id;
+
+  if (subscriptionStatus !== 'none') {
+    await db
+      .from('profiles')
+      .update({
+        subscription_status: subscriptionStatus,
+        subscription_expires_at: expiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    await syncSubscriptionRecords(db, userId, subscriptionStatus, expiresAt);
+  }
+
   revalidatePath('/users');
   revalidatePath('/');
-  return data.user.id;
+  return userId;
+}
+
+export async function deleteUser(userId: string) {
+  const db = createAdminClient();
+  const { error } = await db.auth.admin.deleteUser(userId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/users');
+  revalidatePath('/');
 }

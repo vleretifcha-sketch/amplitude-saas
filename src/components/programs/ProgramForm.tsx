@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { upsertProgram } from '@/actions/programs';
+import { deleteProgram, upsertProgram } from '@/actions/programs';
+import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
 import {
   ProgramSessionsEditor,
   type ProgramVideoOption,
@@ -128,6 +129,14 @@ export function ProgramForm({
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}
       </Button>
+      {program ? (
+        <DeleteResourceButton
+          label={t('programs.delete')}
+          confirmMessage={t('programs.deleteConfirm', { name: program.title })}
+          redirectTo="/programs"
+          onDelete={() => deleteProgram(program.id)}
+        />
+      ) : null}
     </form>
   );
 }

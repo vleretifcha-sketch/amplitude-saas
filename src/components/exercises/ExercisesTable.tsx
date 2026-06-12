@@ -7,6 +7,7 @@ import { SortableTableHead, useTableSort } from '@/components/ui/SortableTableHe
 import { useLocale } from '@/i18n/client';
 import { compareText, type SortDirection } from '@/lib/sort';
 import type { Exercise } from '@/lib/types';
+import { buildVimeoWatchUrl } from '@/lib/vimeo';
 
 function sortExercises(rows: Exercise[], sortKey: string, direction: SortDirection): Exercise[] {
   const sorted = [...rows];
@@ -101,12 +102,13 @@ export function ExercisesTable({ exercises }: { exercises: Exercise[] }) {
               <td className="px-6 py-4 text-secondary">
                 {exercise.vimeo_video_id ? (
                   <a
-                    href={`https://vimeo.com/${exercise.vimeo_video_id}`}
+                    href={buildVimeoWatchUrl(exercise.vimeo_video_id, exercise.vimeo_hash)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-accent hover:underline"
                   >
                     {exercise.vimeo_video_id}
+                    {exercise.vimeo_hash ? ` / ${exercise.vimeo_hash.slice(0, 6)}…` : ''}
                   </a>
                 ) : (
                   t('common.dash')

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { uniqueId } from '@/lib/slug';
 import { resolveImageUrlFromForm } from '@/lib/upload-image';
 import type { ExerciseDraft } from '@/lib/types';
+import { removeVideoIdsFromPrograms } from '@/lib/program-cleanup';
 
 async function syncProgramSessions(
   db: ReturnType<typeof createAdminClient>,
@@ -166,8 +167,13 @@ export async function upsertVideo(formData: FormData): Promise<string> {
 
 export async function deleteVideo(id: string) {
   const db = createAdminClient();
+  await removeVideoIdsFromPrograms(db, [id]);
+
   const { error } = await db.from('videos').delete().eq('id', id);
   if (error) throw new Error(error.message);
+
   revalidatePath('/videos');
+  revalidatePath('/programs');
   revalidatePath('/exercises');
+  revalidatePath('/');
 }

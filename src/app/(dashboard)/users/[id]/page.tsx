@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { DeleteUserButton } from '@/components/users/DeleteUserButton';
 import { SubscriptionForm } from '@/components/users/SubscriptionForm';
 import { UserProfileForm } from '@/components/users/UserProfileForm';
 import { createTranslator, getDateLocale, getLocale, translateStatus } from '@/i18n';
@@ -174,6 +175,12 @@ export default async function UserDetailPage({
           </Card>
         </div>
       </div>
+
+      <Card className="mt-6">
+        <h2 className="mb-2 text-lg font-medium text-error">{t('users.dangerZone')}</h2>
+        <p className="mb-4 text-sm text-secondary">{t('users.dangerHint')}</p>
+        <DeleteUserButton userId={p.id} userName={name} />
+      </Card>
     </div>
   );
 }

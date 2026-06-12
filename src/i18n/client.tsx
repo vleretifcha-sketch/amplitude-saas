@@ -62,7 +62,6 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
 
   return (
     <div className={className}>
-      <p className="mb-2 px-2 text-xs uppercase tracking-widest text-muted">{t('lang.label')}</p>
       <div className="flex gap-1 rounded-2xl bg-surface-muted p-1">
         {(['fr', 'en'] as const).map((code) => (
           <button
