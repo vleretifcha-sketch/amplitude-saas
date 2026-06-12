@@ -1,33 +1,27 @@
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeProductsWithStats } from '@/actions/stripe-products';
+import { fetchProfilesForList } from '@/lib/queries';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { StripeProductsPanel } from '@/components/stripe/StripeProductsPanel';
 import { UsersTable } from '@/components/users/UsersTable';
 import { createTranslator, getDateLocale } from '@/i18n';
-import type { Profile } from '@/lib/types';
 
 export async function UsersPageContent({ locale }: { locale: 'fr' | 'en' }) {
   const t = createTranslator(locale);
   const dateLocale = getDateLocale(locale);
   const db = createAdminClient();
 
-  const [{ data: profiles }, { data: subs }, stripeProducts] = await Promise.all([
-    db
-      .from('profiles')
-      .select(
-        'id, email, first_name, last_name, subscription_status, subscription_expires_at, subscription_plan, stripe_customer_id, created_at'
-      )
-      .order('created_at', { ascending: false })
-      .limit(500),
+  const [profiles, { data: subs }, stripeProducts] = await Promise.all([
+    fetchProfilesForList(500),
     db.from('subscriptions').select('status, price_monthly'),
     getStripeProductsWithStats(),
   ]);
 
-  const users = (profiles ?? []) as Profile[];
-  const activeCount = users.filter((u) => u.subscription_status === 'active').length;
+  const users = profiles;
+  const activeCount = users.filter((u) => u.subscription_status === 'active' || u.subscription_status === 'trial').length;
   const mrr = (subs ?? [])
     .filter((s) => s.status === 'active')
     .reduce((sum, s) => sum + Number(s.price_monthly), 0);

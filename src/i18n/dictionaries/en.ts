@@ -215,6 +215,7 @@ export const en: Dictionary = {
     new: 'New user',
     searchPlaceholder: 'Search by name or email…',
     searchEmpty: 'No users match this search.',
+    empty: 'No registered users yet.',
     formFirstName: 'First name',
     formLastName: 'Last name',
     formPassword: 'Temporary password',

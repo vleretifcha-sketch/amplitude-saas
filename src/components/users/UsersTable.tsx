@@ -60,7 +60,7 @@ export function UsersTable({ users, dateLocale }: { users: Profile[]; dateLocale
             {paged.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center text-muted">
-                  {t('users.searchEmpty')}
+                  {query.trim() ? t('users.searchEmpty') : t('users.empty')}
                 </td>
               </tr>
             ) : (

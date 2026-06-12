@@ -215,6 +215,7 @@ export const fr = {
     new: 'Nouvel utilisateur',
     searchPlaceholder: 'Rechercher par nom ou email…',
     searchEmpty: 'Aucun utilisateur ne correspond à cette recherche.',
+    empty: 'Aucun utilisateur inscrit pour le moment.',
     formFirstName: 'Prénom',
     formLastName: 'Nom',
     formPassword: 'Mot de passe temporaire',

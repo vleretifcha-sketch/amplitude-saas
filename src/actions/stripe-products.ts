@@ -92,13 +92,17 @@ export async function archiveStripeProduct(productId: string) {
 
 export async function getStripeProductsWithStats(): Promise<StripeProductRow[]> {
   const db = createAdminClient();
-  const [{ data: products }, { data: subs }] = await Promise.all([
-    db.from('stripe_products').select('*').order('created_at', { ascending: false }),
-    db
-      .from('subscriptions')
-      .select('stripe_product_id, status')
-      .eq('status', 'active'),
-  ]);
+
+  const { data: products, error: productsError } = await db
+    .from('stripe_products')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (productsError || !products?.length) {
+    return [];
+  }
+
+  const { data: subs } = await db.from('subscriptions').select('stripe_product_id, status').eq('status', 'active');
 
   const countByProduct = (subs ?? []).reduce<Record<string, number>>((acc, row) => {
     if (!row.stripe_product_id) return acc;
@@ -106,7 +110,7 @@ export async function getStripeProductsWithStats(): Promise<StripeProductRow[]> 
     return acc;
   }, {});
 
-  return (products ?? []).map((product) => ({
+  return products.map((product) => ({
     ...(product as StripeProductRow),
     activeSubscribers: countByProduct[product.id] ?? 0,
   }));
