@@ -10,11 +10,18 @@ import { Card } from '@/components/ui/Card';
 import { useLocale } from '@/i18n/client';
 import type { StripeProductRow } from '@/lib/types';
 
-export function CreatePromoCodeForm({ product }: { product: StripeProductRow }) {
+export function CreatePromoCodeForm({
+  product,
+  onCreated,
+}: {
+  product: StripeProductRow;
+  onCreated?: () => void;
+}) {
   const { t } = useLocale();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [duration, setDuration] = useState<'once' | 'forever' | 'repeating'>('once');
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
@@ -23,6 +30,7 @@ export function CreatePromoCodeForm({ product }: { product: StripeProductRow }) 
       await createStripePromoCode(formData);
       toast.success(t('toast.created'));
       setOpen(false);
+      onCreated?.();
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
@@ -40,8 +48,9 @@ export function CreatePromoCodeForm({ product }: { product: StripeProductRow }) 
   }
 
   return (
-    <Card className="mt-3 space-y-4 border-dashed">
+    <Card className="space-y-4 border-dashed">
       <h4 className="text-sm font-medium">{t('stripe.createPromoFor', { name: product.name })}</h4>
+      <p className="text-sm text-secondary">{t('stripe.promoHint')}</p>
       <form action={onSubmit} className="grid gap-3 md:grid-cols-2">
         <Field>
           <Label htmlFor={`code-${product.id}`}>{t('stripe.promoCode')}</Label>
@@ -60,12 +69,31 @@ export function CreatePromoCodeForm({ product }: { product: StripeProductRow }) 
         </Field>
         <Field>
           <Label htmlFor={`duration-${product.id}`}>{t('stripe.promoDuration')}</Label>
-          <Select id={`duration-${product.id}`} name="duration" defaultValue="once">
-            <option value="once">once</option>
-            <option value="forever">forever</option>
-            <option value="repeating">repeating</option>
+          <Select
+            id={`duration-${product.id}`}
+            name="duration"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value as 'once' | 'forever' | 'repeating')}
+          >
+            <option value="once">{t('stripe.durationOnce')}</option>
+            <option value="forever">{t('stripe.durationForever')}</option>
+            <option value="repeating">{t('stripe.durationRepeatingLabel')}</option>
           </Select>
         </Field>
+        {duration === 'repeating' ? (
+          <Field>
+            <Label htmlFor={`duration_in_months-${product.id}`}>{t('stripe.promoDurationMonths')}</Label>
+            <Input
+              id={`duration_in_months-${product.id}`}
+              name="duration_in_months"
+              type="number"
+              min="1"
+              step="1"
+              defaultValue="3"
+              required
+            />
+          </Field>
+        ) : null}
         <Field>
           <Label htmlFor={`max_redemptions-${product.id}`}>{t('stripe.promoLimit')}</Label>
           <Input id={`max_redemptions-${product.id}`} name="max_redemptions" type="number" min="1" placeholder="100" />

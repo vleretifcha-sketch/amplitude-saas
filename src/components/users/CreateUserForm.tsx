@@ -103,13 +103,7 @@ export function CreateUserForm({ stripeProducts = [] }: { stripeProducts?: Strip
                   ))}
                 </Select>
               </Field>
-              <Field>
-                <Label htmlFor="subscription_plan">{t('users.planInterval')}</Label>
-                <Select id="subscription_plan" name="subscription_plan" defaultValue="monthly">
-                  <option value="monthly">{t('users.planMonthly')}</option>
-                  <option value="annual">{t('users.planAnnual')}</option>
-                </Select>
-              </Field>
+              <input type="hidden" name="subscription_plan" value="monthly" />
             </>
           ) : accessType === 'premium' ? (
             <>

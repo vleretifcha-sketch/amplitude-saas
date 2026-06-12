@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/lib/stripe/server';
-import type { StripeProductRow } from '@/lib/types';
+import { createStripePaymentLink } from '@/lib/stripe/payment-link';
+import type { StripeProductRow, StripePromoCode } from '@/lib/types';
 
 function parseEuro(value: FormDataEntryValue | null): number | null {
   const n = Number(String(value || '').replace(',', '.'));
@@ -14,55 +15,41 @@ export async function createStripeProduct(formData: FormData) {
   const name = String(formData.get('name') || '').trim();
   const description = String(formData.get('description') || '').trim() || null;
   const monthlyPrice = parseEuro(formData.get('monthly_price'));
-  const annualPrice = parseEuro(formData.get('annual_price'));
-  const trialDaysRaw = String(formData.get('trial_days') || '').trim();
-  const trialDays = trialDaysRaw ? Number(trialDaysRaw) : null;
 
   if (!name) throw new Error('Offer name is required.');
-  if (!monthlyPrice && !annualPrice) {
-    throw new Error('At least one price (monthly or annual) is required.');
-  }
+  if (!monthlyPrice) throw new Error('Monthly price is required.');
 
   const stripe = await getStripeClient();
   const product = await stripe.products.create({ name, description: description ?? undefined });
 
-  let stripeMonthlyPriceId: string | null = null;
-  let stripeAnnualPriceId: string | null = null;
-
-  if (monthlyPrice) {
-    const price = await stripe.prices.create({
-      product: product.id,
-      unit_amount: Math.round(monthlyPrice * 100),
-      currency: 'eur',
-      recurring: { interval: 'month' },
-    });
-    stripeMonthlyPriceId = price.id;
-  }
-
-  if (annualPrice) {
-    const price = await stripe.prices.create({
-      product: product.id,
-      unit_amount: Math.round(annualPrice * 100),
-      currency: 'eur',
-      recurring: { interval: 'year' },
-    });
-    stripeAnnualPriceId = price.id;
-  }
-
-  const db = createAdminClient();
-  const { error } = await db.from('stripe_products').insert({
-    stripe_product_id: product.id,
-    stripe_monthly_price_id: stripeMonthlyPriceId,
-    stripe_annual_price_id: stripeAnnualPriceId,
-    name,
-    description,
-    monthly_price: monthlyPrice,
-    annual_price: annualPrice,
-    trial_days: trialDays,
-    active: true,
+  const price = await stripe.prices.create({
+    product: product.id,
+    unit_amount: Math.round(monthlyPrice * 100),
+    currency: 'eur',
+    recurring: { interval: 'month' },
   });
 
+  const db = createAdminClient();
+  const { data: inserted, error } = await db
+    .from('stripe_products')
+    .insert({
+      stripe_product_id: product.id,
+      stripe_monthly_price_id: price.id,
+      stripe_annual_price_id: null,
+      name,
+      description,
+      monthly_price: monthlyPrice,
+      annual_price: null,
+      trial_days: null,
+      active: true,
+    })
+    .select('id, stripe_monthly_price_id')
+    .single();
+
   if (error) throw new Error(error.message);
+  if (!inserted) throw new Error('Product insert failed.');
+
+  await createStripePaymentLink(stripe, db, inserted);
 
   revalidatePath('/users');
 }
@@ -71,7 +58,7 @@ export async function archiveStripeProduct(productId: string) {
   const db = createAdminClient();
   const { data: product } = await db
     .from('stripe_products')
-    .select('stripe_product_id')
+    .select('stripe_product_id, stripe_payment_link_id')
     .eq('id', productId)
     .single();
 
@@ -79,6 +66,9 @@ export async function archiveStripeProduct(productId: string) {
 
   const stripe = await getStripeClient();
   await stripe.products.update(product.stripe_product_id, { active: false });
+  if (product.stripe_payment_link_id) {
+    await stripe.paymentLinks.update(product.stripe_payment_link_id, { active: false });
+  }
 
   const { error } = await db
     .from('stripe_products')
@@ -102,7 +92,10 @@ export async function getStripeProductsWithStats(): Promise<StripeProductRow[]> 
     return [];
   }
 
-  const { data: subs } = await db.from('subscriptions').select('stripe_product_id, status').eq('status', 'active');
+  const [{ data: subs }, { data: promos }] = await Promise.all([
+    db.from('subscriptions').select('stripe_product_id, status').eq('status', 'active'),
+    db.from('stripe_promo_codes').select('*').order('created_at', { ascending: false }),
+  ]);
 
   const countByProduct = (subs ?? []).reduce<Record<string, number>>((acc, row) => {
     if (!row.stripe_product_id) return acc;
@@ -110,9 +103,18 @@ export async function getStripeProductsWithStats(): Promise<StripeProductRow[]> 
     return acc;
   }, {});
 
+  const promosByProduct = (promos ?? []).reduce<Record<string, StripePromoCode[]>>((acc, row) => {
+    const productId = row.stripe_product_id;
+    if (!productId) return acc;
+    if (!acc[productId]) acc[productId] = [];
+    acc[productId].push(row as StripePromoCode);
+    return acc;
+  }, {});
+
   return products.map((product) => ({
     ...(product as StripeProductRow),
     activeSubscribers: countByProduct[product.id] ?? 0,
+    promoCodes: promosByProduct[product.id] ?? [],
   }));
 }
 
@@ -130,6 +132,9 @@ export async function createStripePromoCode(formData: FormData) {
   if (!code) code = `AMP-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
   if (!Number.isFinite(discountValue) || discountValue <= 0) {
     throw new Error('Discount value is required.');
+  }
+  if (discountType === 'percent' && discountValue > 100) {
+    throw new Error('Percentage cannot exceed 100.');
   }
 
   const stripe = await getStripeClient();
@@ -170,6 +175,46 @@ export async function createStripePromoCode(formData: FormData) {
     active: promoCode.active,
   });
 
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/users');
+}
+
+export async function ensureStripePaymentLink(productId: string): Promise<string> {
+  const db = createAdminClient();
+  const { data: product } = await db
+    .from('stripe_products')
+    .select('id, stripe_monthly_price_id, stripe_payment_link_url')
+    .eq('id', productId)
+    .eq('active', true)
+    .single();
+
+  if (!product) throw new Error('Product not found.');
+
+  if (product.stripe_payment_link_url) {
+    return product.stripe_payment_link_url;
+  }
+
+  const stripe = await getStripeClient();
+  const link = await createStripePaymentLink(stripe, db, product);
+  revalidatePath('/users');
+  return link;
+}
+
+export async function deactivateStripePromoCode(promoId: string) {
+  const db = createAdminClient();
+  const { data: promo } = await db
+    .from('stripe_promo_codes')
+    .select('stripe_promotion_code_id')
+    .eq('id', promoId)
+    .single();
+
+  if (!promo) throw new Error('Promo code not found.');
+
+  const stripe = await getStripeClient();
+  await stripe.promotionCodes.update(promo.stripe_promotion_code_id, { active: false });
+
+  const { error } = await db.from('stripe_promo_codes').update({ active: false }).eq('id', promoId);
   if (error) throw new Error(error.message);
 
   revalidatePath('/users');

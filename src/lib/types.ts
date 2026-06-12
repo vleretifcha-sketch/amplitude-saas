@@ -154,6 +154,8 @@ export type StripeProduct = {
   monthly_price: number | null;
   annual_price: number | null;
   trial_days: number | null;
+  stripe_payment_link_id: string | null;
+  stripe_payment_link_url: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -161,6 +163,7 @@ export type StripeProduct = {
 
 export type StripeProductRow = StripeProduct & {
   activeSubscribers: number;
+  promoCodes: StripePromoCode[];
 };
 
 export type StripePromoCode = {

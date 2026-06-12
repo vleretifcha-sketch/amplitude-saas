@@ -12,7 +12,8 @@ export default async function ExerciseDetailPage({
 }) {
   const { id } = await params;
   const db = createAdminClient();
-  const { data } = await db.from('exercises').select('*').eq('id', id).single();
+  const { data, error } = await db.from('exercises').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
   if (!data) notFound();
 
   return (

@@ -27,8 +27,7 @@ export function DeleteResourceButton({
     try {
       await onDelete();
       toast.success(t('toast.deleted'));
-      router.push(redirectTo);
-      router.refresh();
+      router.replace(redirectTo);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
       setLoading(false);

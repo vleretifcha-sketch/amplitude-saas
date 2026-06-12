@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { uniqueId } from '@/lib/slug';
-import { createTranslator, getLocale } from '@/i18n';
 import { parseVimeoFields } from '@/lib/vimeo';
 
 export async function upsertLibraryExercise(formData: FormData): Promise<string> {
@@ -28,7 +27,11 @@ export async function upsertLibraryExercise(formData: FormData): Promise<string>
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await db.from('exercises').upsert(row);
+  let { error } = await db.from('exercises').upsert(row);
+  if (error?.message.includes('description')) {
+    const { description: _d, ...rowWithoutDescription } = row;
+    ({ error } = await db.from('exercises').upsert(rowWithoutDescription));
+  }
   if (error) throw new Error(error.message);
 
   await db
@@ -54,8 +57,7 @@ export async function deleteLibraryExercise(id: string) {
     .eq('library_exercise_id', id);
 
   if ((count ?? 0) > 0) {
-    const t = createTranslator(await getLocale());
-    throw new Error(t('exercises.inUseError'));
+    throw new Error('Cet exercice est utilisé dans au moins une séance.');
   }
 
   const { error } = await db.from('exercises').delete().eq('id', id);

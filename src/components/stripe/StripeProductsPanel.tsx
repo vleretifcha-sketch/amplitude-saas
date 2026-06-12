@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CreatePromoCodeForm } from '@/components/stripe/CreatePromoCodeForm';
 import { CreateStripeProductForm } from '@/components/stripe/CreateStripeProductForm';
+import { StripePaymentLinkField } from '@/components/stripe/StripePaymentLinkField';
+import { StripePromoCodesList } from '@/components/stripe/StripePromoCodesList';
 import { paginate, Pagination } from '@/components/ui/Pagination';
 import { useLocale } from '@/i18n/client';
 import type { StripeProductRow } from '@/lib/types';
@@ -65,13 +67,10 @@ export function StripeProductsPanel({ products }: { products: StripeProductRow[]
                   <p className="mt-2 text-sm text-secondary">
                     {product.monthly_price != null ? `${product.monthly_price} €/${t('stripe.monthShort')}` : '—'}
                     {' · '}
-                    {product.annual_price != null ? `${product.annual_price} €/${t('stripe.yearShort')}` : '—'}
-                    {' · '}
                     {t('stripe.subscribers', { count: product.activeSubscribers })}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {product.active ? <CreatePromoCodeForm product={product} /> : null}
                   {product.active ? (
                     <Button
                       type="button"
@@ -85,6 +84,16 @@ export function StripeProductsPanel({ products }: { products: StripeProductRow[]
                   ) : null}
                 </div>
               </div>
+              {product.active ? (
+                <div className="space-y-4 border-t border-border-subtle pt-4">
+                  <StripePaymentLinkField
+                    productId={product.id}
+                    initialUrl={product.stripe_payment_link_url}
+                  />
+                  <StripePromoCodesList promoCodes={product.promoCodes} />
+                  <CreatePromoCodeForm product={product} onCreated={() => router.refresh()} />
+                </div>
+              ) : null}
             </Card>
           ))}
           <Pagination page={page} totalItems={products.length} onPageChange={setPage} />
