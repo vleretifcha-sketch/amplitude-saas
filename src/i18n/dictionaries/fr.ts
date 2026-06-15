@@ -124,6 +124,9 @@ export const fr = {
     mobilityTitle: 'Mobilité / Échauffement',
     mobilityHint: 'Vidéos courtes — tu peux en ajouter plusieurs.',
     mobilityEmpty: 'Aucune vidéo mobilité dans le catalogue. Créez-en dans Séances.',
+    sectionOrderHint: 'Glisse les blocs pour changer l’ordre affiché dans l’app (cours guidé, mobilité, trainings).',
+    sectionDragHint: 'Glisser pour réordonner',
+    moveSection: 'Déplacer ce bloc de séances',
     catalogCount: '{{count}} séance disponible dans le catalogue.',
     catalogCountPlural: '{{count}} séances disponibles dans le catalogue.',
     migrationError:

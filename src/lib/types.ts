@@ -29,6 +29,7 @@ export type Program = {
   signature_session_ids: string[];
   complementary_session_ids: string[];
   mobility_session_ids?: string[];
+  session_section_order?: string[];
   sort_order: number;
   created_at: string;
   updated_at: string;

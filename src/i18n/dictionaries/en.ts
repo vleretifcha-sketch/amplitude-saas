@@ -126,6 +126,9 @@ export const en: Dictionary = {
     mobilityTitle: 'Mobility / Warm-up',
     mobilityHint: 'Short videos — you can add several.',
     mobilityEmpty: 'No mobility video in the catalog. Create one in Sessions.',
+    sectionOrderHint: 'Drag blocks to change the order shown in the app (guided class, mobility, trainings).',
+    sectionDragHint: 'Drag to reorder',
+    moveSection: 'Move this session block',
     catalogCount: '{{count}} session available in the catalog.',
     catalogCountPlural: '{{count}} sessions available in the catalog.',
     migrationError:
