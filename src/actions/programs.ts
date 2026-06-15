@@ -2,10 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { slugify, uniqueId } from '@/lib/slug';
-import { resolveImageUrlFromForm } from '@/lib/upload-image';
+import { uniqueId } from '@/lib/slug';
 import { createTranslator, getLocale } from '@/i18n';
-import { removeVideoIdsFromPrograms } from '@/lib/program-cleanup';
 
 function parseIdList(raw: FormDataEntryValue | null): string[] {
   if (!raw) return [];
@@ -21,30 +19,23 @@ function parseIdList(raw: FormDataEntryValue | null): string[] {
 export async function upsertProgram(formData: FormData): Promise<string> {
   const db = createAdminClient();
   const existingId = String(formData.get('id') || '').trim();
+  const methodId = String(formData.get('method_id') || '').trim();
   const title = String(formData.get('title')).trim();
   const signatureSessionIds = parseIdList(formData.get('signature_session_ids'));
   const complementarySessionIds = parseIdList(formData.get('complementary_session_ids'));
   const mobilitySessionIds = parseIdList(formData.get('mobility_session_ids'));
 
+  if (!methodId) throw new Error('method_id is required');
+
   const id = existingId || (await uniqueId(db, 'programs', 'prog-', title));
-  const coverImageUrl = await resolveImageUrlFromForm(formData, {
-    folder: `programs/${id}`,
-    urlField: 'cover_image_url',
-    fileField: 'cover_image_file',
-  });
 
   const baseRow = {
     id,
+    method_id: methodId,
     title,
-    subtitle: String(formData.get('subtitle') || '') || null,
-    goal: slugify(title),
-    description: String(formData.get('description') || '') || null,
     duration_weeks: Number(formData.get('duration_weeks') || 4),
-    cover_image_url: coverImageUrl,
-    tagline: String(formData.get('tagline') || '') || null,
     signature_session_id: signatureSessionIds[0] ?? null,
     complementary_session_ids: complementarySessionIds,
-    is_premium: formData.get('is_premium') === 'on',
     sort_order: Number(formData.get('sort_order') || 0),
     updated_at: new Date().toISOString(),
   };
@@ -65,6 +56,10 @@ export async function upsertProgram(formData: FormData): Promise<string> {
     }
   }
 
+  if (error?.message.includes('method_id')) {
+    throw new Error('Migration Supabase manquante : exécute 017_methods_hierarchy.sql');
+  }
+
   if (error) throw new Error(error.message);
 
   const selectedVideoIds = [...signatureSessionIds, ...mobilitySessionIds, ...complementarySessionIds];
@@ -76,24 +71,21 @@ export async function upsertProgram(formData: FormData): Promise<string> {
     if (videoError) throw new Error(videoError.message);
   }
 
-  revalidatePath('/programs');
+  revalidatePath('/methods');
+  revalidatePath(`/methods/${methodId}`);
+  revalidatePath(`/methods/${methodId}/programs/${id}`);
   revalidatePath('/videos');
-  revalidatePath(`/programs/${id}`);
   revalidatePath('/');
   return id;
 }
 
-export async function deleteProgram(id: string) {
+export async function deleteProgram(methodId: string, programId: string) {
   const db = createAdminClient();
-  const { data: videos } = await db.from('videos').select('id').eq('program_id', id);
-  const videoIds = (videos ?? []).map((row) => row.id);
-
-  await removeVideoIdsFromPrograms(db, videoIds);
-
-  const { error } = await db.from('programs').delete().eq('id', id);
+  const { error } = await db.from('programs').delete().eq('id', programId);
   if (error) throw new Error(error.message);
 
-  revalidatePath('/programs');
+  revalidatePath('/methods');
+  revalidatePath(`/methods/${methodId}`);
   revalidatePath('/videos');
   revalidatePath('/');
 }

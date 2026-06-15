@@ -8,66 +8,6 @@ import type { ExerciseDraft } from '@/lib/types';
 import { removeVideoIdsFromPrograms } from '@/lib/program-cleanup';
 import { isComplementarySessionType } from '@/lib/video-session';
 
-async function syncProgramSessions(
-  db: ReturnType<typeof createAdminClient>,
-  programId: string,
-  videoId: string,
-  type: string
-) {
-  if (type === 'signature') {
-    const { data: program } = await db
-      .from('programs')
-      .select('signature_session_ids')
-      .eq('id', programId)
-      .single();
-
-    const ids = program?.signature_session_ids ?? [];
-    if (!ids.includes(videoId)) {
-      await db
-        .from('programs')
-        .update({
-          signature_session_ids: [...ids, videoId],
-          signature_session_id: ids.length === 0 ? videoId : ids[0],
-        })
-        .eq('id', programId);
-    }
-    return;
-  }
-
-  if (type === 'complementary') {
-    const { data: program } = await db
-      .from('programs')
-      .select('complementary_session_ids')
-      .eq('id', programId)
-      .single();
-
-    const ids = program?.complementary_session_ids ?? [];
-    if (!ids.includes(videoId)) {
-      await db
-        .from('programs')
-        .update({ complementary_session_ids: [...ids, videoId] })
-        .eq('id', programId);
-    }
-    return;
-  }
-
-  if (type === 'mobility') {
-    const { data: program } = await db
-      .from('programs')
-      .select('mobility_session_ids')
-      .eq('id', programId)
-      .single();
-
-    const ids = program?.mobility_session_ids ?? [];
-    if (!ids.includes(videoId)) {
-      await db
-        .from('programs')
-        .update({ mobility_session_ids: [...ids, videoId] })
-        .eq('id', programId);
-    }
-  }
-}
-
 function parseExercises(formData: FormData): ExerciseDraft[] {
   const raw = formData.get('exercises_payload');
   if (!raw) return [];
@@ -138,9 +78,14 @@ export async function upsertVideo(formData: FormData): Promise<string> {
   const status = String(formData.get('status'));
   const publishedAt = formData.get('published_at');
   const type = String(formData.get('type'));
-  const programId = String(formData.get('program_id'));
 
   const id = existingId || (await uniqueId(db, 'videos', 'vid-', title));
+
+  let programId: string | null = null;
+  if (existingId) {
+    const { data: existing } = await db.from('videos').select('program_id').eq('id', existingId).single();
+    programId = existing?.program_id ?? null;
+  }
   const thumbnailUrl = await resolveImageUrlFromForm(formData, {
     folder: `videos/${id}`,
     urlField: 'thumbnail_url',
@@ -178,13 +123,12 @@ export async function upsertVideo(formData: FormData): Promise<string> {
   const { error } = await db.from('videos').upsert(row);
   if (error) throw new Error(error.message);
 
-  await syncProgramSessions(db, programId, id, type);
   await syncVideoExercises(db, id, type, parseExercises(formData));
 
   revalidatePath('/videos');
   revalidatePath(`/videos/${row.id}`);
-  revalidatePath('/programs');
-  revalidatePath(`/programs/${programId}`);
+  revalidatePath('/methods');
+  if (programId) revalidatePath(`/methods`);
   revalidatePath('/exercises');
   return row.id;
 }
@@ -197,7 +141,7 @@ export async function deleteVideo(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath('/videos');
-  revalidatePath('/programs');
+  revalidatePath('/methods');
   revalidatePath('/exercises');
   revalidatePath('/');
 }

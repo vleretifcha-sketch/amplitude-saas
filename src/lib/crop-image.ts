@@ -6,7 +6,8 @@ export type CropArea = {
 };
 
 export const IMAGE_CROP_ASPECT = {
-  programCover: 4 / 3,
+  /** Cartes méthodes dans l'app (~3:2, pleine largeur × 240px). */
+  programCover: 3 / 2,
   sessionThumbnail: 1,
 } as const;
 

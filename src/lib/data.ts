@@ -28,7 +28,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const [users, activeSubs, programs, videos, sessions, posts] = await Promise.all([
       db.from('profiles').select('*', { count: 'exact', head: true }),
       db.from('profiles').select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
-      db.from('programs').select('*', { count: 'exact', head: true }),
+      db.from('methods').select('*', { count: 'exact', head: true }),
       db.from('videos').select('*', { count: 'exact', head: true }).eq('status', 'published'),
       db
         .from('session_logs')

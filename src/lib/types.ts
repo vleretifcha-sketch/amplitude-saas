@@ -1,22 +1,34 @@
 export type VideoStatus = 'draft' | 'published' | 'archived';
+export type ProgramStatus = 'draft' | 'published';
 export type VideoType = 'signature' | 'complementary' | 'mobility';
 export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'none';
 export type SubscriptionRecordStatus = 'active' | 'cancelled' | 'expired' | 'grace_period';
 
-export type Program = {
+export type Method = {
   id: string;
   title: string;
   subtitle: string | null;
   goal: string;
   description: string | null;
-  duration_weeks: number;
   cover_image_url: string | null;
   tagline: string | null;
+  is_premium: boolean;
+  status: ProgramStatus;
+  published_at: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Program = {
+  id: string;
+  method_id: string;
+  title: string;
+  duration_weeks: number;
   signature_session_id: string | null;
   signature_session_ids: string[];
   complementary_session_ids: string[];
   mobility_session_ids?: string[];
-  is_premium: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -24,7 +36,7 @@ export type Program = {
 
 export type Video = {
   id: string;
-  program_id: string;
+  program_id: string | null;
   title: string;
   description: string | null;
   duration_seconds: number;

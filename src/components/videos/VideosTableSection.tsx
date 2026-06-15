@@ -60,7 +60,7 @@ export async function VideosTableSection({ locale }: { locale: 'fr' | 'en' }) {
       published_at: null,
       created_at: '',
       updated_at: '',
-      programTitle: programRelation?.title ?? video.program_id,
+      programTitle: programRelation?.title ?? (video.program_id ? video.program_id : t('common.dash')),
       exerciseLabel,
       exerciseCount: isComplementarySessionType(video.type) ? legacyCount || linkedCount : 0,
     };

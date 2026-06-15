@@ -6,7 +6,7 @@ import { runContentSync } from '@/lib/sync-content';
 export async function syncContentGlobally() {
   const report = await runContentSync();
   revalidatePath('/');
-  revalidatePath('/programs');
+  revalidatePath('/methods');
   revalidatePath('/videos');
   revalidatePath('/exercises');
   return report;

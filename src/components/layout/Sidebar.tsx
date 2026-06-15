@@ -23,7 +23,7 @@ export function Sidebar() {
 
   const nav = [
     { href: '/', label: t('nav.overview'), icon: LayoutDashboard },
-    { href: '/programs', label: t('nav.programs'), icon: Layers },
+    { href: '/methods', label: t('nav.programs'), icon: Layers },
     { href: '/videos', label: t('nav.videos'), icon: PlayCircle },
     { href: '/exercises', label: t('nav.exercises'), icon: Dumbbell },
     { href: '/users', label: t('nav.users'), icon: Users },

@@ -8,7 +8,7 @@ import type { DashboardStats } from '@/lib/types';
 const statLinks: Record<keyof DashboardStats, string> = {
   users: '/users',
   activeSubscriptions: '/users',
-  programs: '/programs',
+  programs: '/methods',
   publishedVideos: '/videos',
   sessionsThisMonth: '/users',
   communityPosts: '/community',

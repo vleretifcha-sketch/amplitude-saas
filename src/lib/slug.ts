@@ -12,7 +12,7 @@ export function slugify(text: string): string {
 
 export async function uniqueId(
   db: SupabaseClient,
-  table: 'programs' | 'videos' | 'video_exercises' | 'exercises',
+  table: 'methods' | 'programs' | 'videos' | 'video_exercises' | 'exercises',
   prefix: string,
   base: string
 ): Promise<string> {

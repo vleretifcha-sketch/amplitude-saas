@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Field, Label, Select } from '@/components/ui/Input';
-import { OptionalMobilitySession } from '@/components/programs/OptionalMobilitySession';
 import { useLocale } from '@/i18n/client';
 import type { Video } from '@/lib/types';
 
@@ -11,7 +10,7 @@ export type ProgramVideoOption = {
   id: string;
   title: string;
   type: Video['type'];
-  programId: string;
+  programId: string | null;
   programTitle: string;
 };
 
@@ -20,7 +19,7 @@ function parseIds(values: string[]): string[] {
 }
 
 function formatOption(video: ProgramVideoOption, programId: string) {
-  if (video.programId === programId) return video.title;
+  if (video.programId === programId || !video.programId) return video.title;
   return `${video.programTitle} — ${video.title}`;
 }
 
@@ -35,7 +34,7 @@ function SessionList({
 }: {
   title: string;
   hint: string;
-  fieldName: 'signature_session_ids' | 'complementary_session_ids';
+  fieldName: 'signature_session_ids' | 'complementary_session_ids' | 'mobility_session_ids';
   programId: string;
   initialIds: string[];
   options: ProgramVideoOption[];
@@ -145,10 +144,14 @@ export function ProgramSessionsEditor({
         emptyMessage={t('programs.signatureEmpty')}
       />
 
-      <OptionalMobilitySession
+      <SessionList
+        title={t('programs.mobilityTitle')}
+        hint={t('programs.mobilityHint')}
+        fieldName="mobility_session_ids"
         programId={programId}
         initialIds={mobilityIds}
         options={mobilityVideos}
+        emptyMessage={t('programs.mobilityEmpty')}
       />
 
       <SessionList

@@ -12,16 +12,14 @@ import { IMAGE_CROP_ASPECT } from '@/lib/crop-image';
 import { ExerciseListEditor } from '@/components/videos/ExerciseListEditor';
 import { useLocale } from '@/i18n/client';
 import { isComplementarySessionType, isVideoOnlySessionType } from '@/lib/video-session';
-import type { Exercise, Program, Video, VideoExercise } from '@/lib/types';
+import type { Exercise, Video, VideoExercise } from '@/lib/types';
 
 export function VideoForm({
   video,
-  programs,
   library = [],
   exercises = [],
 }: {
   video?: Video;
-  programs: Pick<Program, 'id' | 'title'>[];
   library?: Exercise[];
   exercises?: VideoExercise[];
 }) {
@@ -47,18 +45,11 @@ export function VideoForm({
   return (
     <form action={onSubmit} encType="multipart/form-data" className="space-y-4">
       {video ? <input type="hidden" name="id" value={video.id} /> : null}
+      <div className="rounded-[var(--radius-input)] border border-border-subtle bg-surface-elevated p-4">
+        <p className="text-sm text-secondary">{t('videos.catalogHint')}</p>
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field>
-          <Label htmlFor="program_id">{t('videos.formProgram')}</Label>
-          <Select id="program_id" name="program_id" defaultValue={video?.program_id} required>
-            {programs.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field>
+        <Field className="md:col-span-2">
           <Label htmlFor="title">{t('videos.formTitle')}</Label>
           <Input id="title" name="title" defaultValue={video?.title} required />
         </Field>
