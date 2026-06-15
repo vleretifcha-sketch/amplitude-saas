@@ -1,35 +1,46 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
-  Layers,
-  PlayCircle,
-  Dumbbell,
   Users,
+  Mail,
   MessageSquare,
   LogOut,
   Settings,
+  FolderOpen,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { LanguageSwitcher, useLocale } from '@/i18n/client';
 import { AmplitudeLogo } from '@/components/layout/AmplitudeLogo';
+import { SidebarNavGroupSection, SidebarNavLinkItem } from '@/components/layout/SidebarNav';
 
 export function Sidebar() {
-  const pathname = usePathname();
   const router = useRouter();
   const { t } = useLocale();
 
-  const nav = [
-    { href: '/', label: t('nav.overview'), icon: LayoutDashboard },
-    { href: '/methods', label: t('nav.programs'), icon: Layers },
-    { href: '/videos', label: t('nav.videos'), icon: PlayCircle },
-    { href: '/exercises', label: t('nav.exercises'), icon: Dumbbell },
-    { href: '/users', label: t('nav.users'), icon: Users },
-    { href: '/community', label: t('nav.community'), icon: MessageSquare },
-    { href: '/settings', label: t('nav.settings'), icon: Settings },
-  ];
+  const contentGroup = {
+    id: 'content',
+    label: t('nav.content'),
+    icon: FolderOpen,
+    items: [
+      { href: '/methods', label: t('nav.programs') },
+      { href: '/videos', label: t('nav.videos') },
+      { href: '/exercises', label: t('nav.exercises') },
+    ],
+  };
+
+  const mailingGroup = {
+    id: 'mailing',
+    label: t('nav.mailing'),
+    icon: Mail,
+    items: [
+      { href: '/newsletter/campaigns', label: t('nav.mailingCampaigns') },
+      { href: '/newsletter/campaigns/new', label: t('nav.mailingNewCampaign') },
+      { href: '/newsletter/subscribers', label: t('nav.mailingSubscribers') },
+    ],
+  };
 
   async function logout() {
     const supabase = createClient();
@@ -45,24 +56,12 @@ export function Sidebar() {
         <p className="mt-2 text-sm font-medium text-muted">{t('nav.admin')}</p>
       </div>
       <nav className="flex flex-1 flex-col gap-1">
-        {nav.map(({ href, label, icon: Icon }) => {
-          const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              prefetch
-              className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors ${
-                active
-                  ? 'bg-button text-inverse font-medium'
-                  : 'text-secondary hover:bg-surface-muted hover:text-foreground'
-              }`}
-            >
-              <Icon size={18} className="shrink-0" />
-              <span className="min-w-0 leading-snug">{label}</span>
-            </Link>
-          );
-        })}
+        <SidebarNavLinkItem href="/" label={t('nav.overview')} icon={LayoutDashboard} />
+        <SidebarNavGroupSection group={contentGroup} />
+        <SidebarNavLinkItem href="/users" label={t('nav.users')} icon={Users} />
+        <SidebarNavGroupSection group={mailingGroup} />
+        <SidebarNavLinkItem href="/community" label={t('nav.community')} icon={MessageSquare} />
+        <SidebarNavLinkItem href="/settings" label={t('nav.settings')} icon={Settings} />
       </nav>
       <LanguageSwitcher className="mt-6" />
       <button

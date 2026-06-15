@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { MethodPublishSwitch } from '@/components/methods/MethodPublishSwitch';
+import { MethodPremiumSwitch } from '@/components/methods/MethodPremiumSwitch';
 import { createTranslator, getLocale } from '@/i18n';
 import { translateStatus } from '@/i18n/translator';
 import type { Method } from '@/lib/types';
@@ -69,9 +70,7 @@ export default async function MethodsPage() {
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge tone={method.is_premium ? 'accent' : 'success'}>
-                    {method.is_premium ? t('methods.premium') : t('methods.free')}
-                  </Badge>
+                  <MethodPremiumSwitch methodId={method.id} isPremium={method.is_premium} />
                 </td>
               </tr>
             ))}
