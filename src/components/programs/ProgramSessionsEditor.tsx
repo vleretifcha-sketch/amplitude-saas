@@ -1,32 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  type DragEndEvent,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Field, Label, Select } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
-import {
-  DEFAULT_SESSION_SECTION_ORDER,
-  normalizeSessionSectionOrder,
-  type SessionSectionType,
-} from '@/lib/session-section-order';
 import type { Video } from '@/lib/types';
 
 export type ProgramVideoOption = {
@@ -137,79 +114,59 @@ function SessionList({
   );
 }
 
-function SortableSection({
-  id,
-  children,
-}: {
-  id: SessionSectionType;
-  children: React.ReactNode;
-}) {
-  const { t } = useLocale();
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`rounded-[var(--radius-input)] border bg-surface p-4 ${
-        isDragging ? 'z-10 border-border shadow-lg' : 'border-border-subtle'
-      }`}
-    >
-      <div className="mb-3 flex items-center gap-2">
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          {...attributes}
-          {...listeners}
-          className="flex h-8 w-8 touch-none cursor-grab items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground active:cursor-grabbing"
-          aria-label={t('programs.moveSection')}
-        >
-          <GripVertical size={16} />
-        </button>
-        <span className="text-xs text-muted">{t('programs.sectionDragHint')}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export function ProgramSessionsEditor({
   programId,
   signatureIds,
   complementaryIds,
   mobilityIds,
-  sectionOrder,
   videos,
 }: {
   programId: string;
   signatureIds: string[];
   complementaryIds: string[];
   mobilityIds: string[];
-  sectionOrder?: string[];
   videos: ProgramVideoOption[];
 }) {
   const { t } = useLocale();
-  const [order, setOrder] = useState<SessionSectionType[]>(() =>
-    normalizeSessionSectionOrder(sectionOrder ?? DEFAULT_SESSION_SECTION_ORDER)
-  );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  const [mobilityEnabled, setMobilityEnabled] = useState(mobilityIds.length > 0);
 
   const signatureVideos = videos.filter((v) => v.type === 'signature');
   const mobilityVideos = videos.filter((v) => v.type === 'mobility');
   const complementaryVideos = videos.filter((v) => v.type === 'complementary');
 
-  const sectionContent: Record<SessionSectionType, React.ReactNode> = {
-    signature: (
+  return (
+    <div className="space-y-6 md:col-span-2 rounded-[var(--radius-input)] border border-border bg-surface-elevated p-4">
+      <div className="space-y-3 rounded-[var(--radius-input)] border border-dashed border-border-subtle p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={mobilityEnabled}
+            onChange={(e) => setMobilityEnabled(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-border"
+          />
+          <span>
+            <span className="text-sm font-medium text-foreground">
+              {t('programs.mobilityOptionalLabel')}
+            </span>
+            <span className="mt-1 block text-xs text-muted">{t('programs.mobilityOptionalHint')}</span>
+          </span>
+        </label>
+
+        {mobilityEnabled ? (
+          <SessionList
+            title={t('programs.mobilityTitle')}
+            hint={t('programs.mobilityHint')}
+            fieldName="mobility_session_ids"
+            programId={programId}
+            initialIds={mobilityIds}
+            options={mobilityVideos}
+            emptyMessage={t('programs.mobilityEmpty')}
+          />
+        ) : (
+          <input type="hidden" name="mobility_session_ids" value="[]" />
+        )}
+      </div>
+
       <SessionList
         title={t('programs.signatureTitle')}
         hint={t('programs.signatureHint')}
@@ -219,19 +176,7 @@ export function ProgramSessionsEditor({
         options={signatureVideos}
         emptyMessage={t('programs.signatureEmpty')}
       />
-    ),
-    mobility: (
-      <SessionList
-        title={t('programs.mobilityTitle')}
-        hint={t('programs.mobilityHint')}
-        fieldName="mobility_session_ids"
-        programId={programId}
-        initialIds={mobilityIds}
-        options={mobilityVideos}
-        emptyMessage={t('programs.mobilityEmpty')}
-      />
-    ),
-    complementary: (
+
       <SessionList
         title={t('programs.complementaryTitle')}
         hint={t('programs.complementaryHint')}
@@ -241,37 +186,6 @@ export function ProgramSessionsEditor({
         options={complementaryVideos}
         emptyMessage={t('programs.complementaryEmpty')}
       />
-    ),
-  };
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    setOrder((prev) => {
-      const oldIndex = prev.indexOf(active.id as SessionSectionType);
-      const newIndex = prev.indexOf(over.id as SessionSectionType);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      return arrayMove(prev, oldIndex, newIndex);
-    });
-  }
-
-  return (
-    <div className="space-y-4 md:col-span-2 rounded-[var(--radius-input)] border border-border bg-surface-elevated p-4">
-      <p className="text-sm text-muted">{t('programs.sectionOrderHint')}</p>
-      <input type="hidden" name="session_section_order" value={JSON.stringify(order)} />
-
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={order} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">
-            {order.map((sectionId) => (
-              <SortableSection key={sectionId} id={sectionId}>
-                {sectionContent[sectionId]}
-              </SortableSection>
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
     </div>
   );
 }

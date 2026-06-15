@@ -100,7 +100,6 @@ export function ProgramForm({
             signatureIds={signatureIds}
             complementaryIds={complementaryIds}
             mobilityIds={mobilityIds}
-            sectionOrder={program?.session_section_order}
             videos={videos}
           />
         ) : (

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { uniqueId } from '@/lib/slug';
 import { createTranslator, getLocale } from '@/i18n';
-import { parseSessionSectionOrder } from '@/lib/session-section-order';
+import { getSessionSectionOrder } from '@/lib/session-section-order';
 
 function parseIdList(raw: FormDataEntryValue | null): string[] {
   if (!raw) return [];
@@ -25,7 +25,7 @@ export async function upsertProgram(formData: FormData): Promise<string> {
   const signatureSessionIds = parseIdList(formData.get('signature_session_ids'));
   const complementarySessionIds = parseIdList(formData.get('complementary_session_ids'));
   const mobilitySessionIds = parseIdList(formData.get('mobility_session_ids'));
-  const sessionSectionOrder = parseSessionSectionOrder(formData.get('session_section_order'));
+  const sessionSectionOrder = getSessionSectionOrder();
 
   if (!methodId) throw new Error('method_id is required');
 
