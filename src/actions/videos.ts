@@ -99,7 +99,7 @@ export async function upsertVideo(formData: FormData): Promise<string> {
     description: String(formData.get('description') || '') || null,
     duration_seconds: isComplementarySessionType(type)
       ? 0
-      : Number(formData.get('duration_seconds') || 0),
+      : Math.round(Number(formData.get('duration_minutes') || 0) * 60),
     thumbnail_url: thumbnailUrl,
     vimeo_video_id: isComplementarySessionType(type)
       ? String(formData.get('vimeo_video_id') || '').trim() || 'none'

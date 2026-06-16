@@ -197,3 +197,25 @@ export type StripePromoCode = {
   active: boolean;
   created_at: string;
 };
+
+export type NewsletterCampaignStatus = 'draft' | 'sent' | 'failed';
+
+export type NewsletterCampaign = {
+  id: string;
+  subject: string;
+  preview: string | null;
+  body: string;
+  from_email: string;
+  from_name: string | null;
+  recipient_count: number;
+  sent_count: number;
+  failed_count: number;
+  status: NewsletterCampaignStatus;
+  created_at: string;
+  sent_at: string | null;
+};
+
+export type NewsletterRecipient = Pick<
+  Profile,
+  'id' | 'email' | 'first_name' | 'last_name' | 'subscription_status' | 'created_at'
+>;

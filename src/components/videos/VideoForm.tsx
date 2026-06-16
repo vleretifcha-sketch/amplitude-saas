@@ -77,12 +77,16 @@ export function VideoForm({
               <Input id="vimeo_hash" name="vimeo_hash" defaultValue={video?.vimeo_hash ?? ''} />
             </Field>
             <Field>
-              <Label htmlFor="duration_seconds">{t('videos.formDuration')}</Label>
+              <Label htmlFor="duration_minutes">{t('videos.formDuration')}</Label>
               <Input
-                id="duration_seconds"
-                name="duration_seconds"
+                id="duration_minutes"
+                name="duration_minutes"
                 type="number"
-                defaultValue={video?.duration_seconds ?? 0}
+                min={1}
+                step={1}
+                defaultValue={
+                  video?.duration_seconds ? Math.round(video.duration_seconds / 60) : 0
+                }
               />
             </Field>
           </>
@@ -90,7 +94,7 @@ export function VideoForm({
           <>
             <input type="hidden" name="vimeo_video_id" value="" />
             <input type="hidden" name="vimeo_hash" value="" />
-            <input type="hidden" name="duration_seconds" value="0" />
+            <input type="hidden" name="duration_minutes" value="0" />
             <div className="rounded-[var(--radius-input)] border border-border-subtle bg-surface-elevated p-4 md:col-span-2">
               <p className="text-sm text-secondary">{t('videos.complementaryOnlyHint')}</p>
             </div>
