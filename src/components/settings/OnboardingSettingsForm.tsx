@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { saveOnboardingImages } from '@/actions/settings';
+import { saveOnboardingImage } from '@/actions/settings';
+import { isUnexpectedServerActionError } from '@/lib/action-error';
+import { isFormDataUploadTooLarge } from '@/lib/form-upload';
 import { Button } from '@/components/ui/Button';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { IMAGE_CROP_ASPECT } from '@/lib/crop-image';
@@ -16,13 +18,40 @@ export function OnboardingSettingsForm({ images }: { images: OnboardingImagesSet
   async function onSubmit(formData: FormData) {
     setLoading(true);
     try {
-      const result = await saveOnboardingImages(formData);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
+      const steps = [
+        { step: 1 as const, url: images.image1 },
+        { step: 2 as const, url: images.image2 },
+        { step: 3 as const, url: images.image3 },
+      ];
+
+      for (const { step, url } of steps) {
+        const single = new FormData();
+        const file = formData.get(`onboarding_image_${step}_file`);
+        const existingUrl = String(formData.get(`onboarding_image_${step}_url`) || url || '').trim();
+
+        if (file instanceof File && file.size > 0) {
+          single.append('image_file', file);
+        }
+        single.append('image_url', existingUrl);
+
+        if (isFormDataUploadTooLarge(single)) {
+          toast.error(t('upload.payloadTooLarge'));
+          return;
+        }
+
+        const result = await saveOnboardingImage(step, single);
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
       }
+
       toast.success(t('toast.saved'));
     } catch (e) {
+      if (isUnexpectedServerActionError(e)) {
+        toast.error(t('upload.payloadTooLarge'));
+        return;
+      }
       toast.error(e instanceof Error ? e.message : t('common.error'));
     } finally {
       setLoading(false);

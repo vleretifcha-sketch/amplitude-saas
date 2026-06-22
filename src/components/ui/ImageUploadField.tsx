@@ -105,7 +105,8 @@ export function ImageUploadField({
     if (!cropSource || !inputRef.current) return;
 
     const outputType = pendingMimeType === 'image/png' ? 'image/png' : 'image/jpeg';
-    const blob = await getCroppedImageBlob(cropSource, croppedAreaPixels, outputType);
+    const maxWidth = cropAspect && cropAspect < 1 ? 1080 : 1400;
+    const blob = await getCroppedImageBlob(cropSource, croppedAreaPixels, outputType, 0.82, maxWidth);
     const croppedFile = new File(
       [blob],
       croppedFileName(pendingOriginalName, outputType),

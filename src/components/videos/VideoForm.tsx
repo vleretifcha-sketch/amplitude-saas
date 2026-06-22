@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { deleteVideo, upsertVideo } from '@/actions/videos';
+import { isUnexpectedServerActionError } from '@/lib/action-error';
+import { isFormDataUploadTooLarge } from '@/lib/form-upload';
 import { Button } from '@/components/ui/Button';
 import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
 import { Field, Input, Label, Select, Textarea } from '@/components/ui/Input';
@@ -31,11 +33,19 @@ export function VideoForm({
   async function onSubmit(formData: FormData) {
     setLoading(true);
     try {
+      if (isFormDataUploadTooLarge(formData)) {
+        toast.error(t('upload.payloadTooLarge'));
+        return;
+      }
       const id = await upsertVideo(formData);
       toast.success(video ? t('toast.saved') : t('toast.created'));
       router.push(`/videos/${id}`);
       router.refresh();
     } catch (e) {
+      if (isUnexpectedServerActionError(e)) {
+        toast.error(t('upload.payloadTooLarge'));
+        return;
+      }
       toast.error(e instanceof Error ? e.message : t('common.error'));
     } finally {
       setLoading(false);

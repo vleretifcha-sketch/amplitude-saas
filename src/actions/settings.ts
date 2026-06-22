@@ -161,31 +161,34 @@ export async function disconnectEmail(): Promise<SettingsActionResult> {
   }
 }
 
-export async function saveOnboardingImages(formData: FormData): Promise<SettingsActionResult> {
+export async function saveOnboardingImage(
+  step: 1 | 2 | 3,
+  formData: FormData
+): Promise<SettingsActionResult> {
   const t = createTranslator(await getLocale());
+  const key = ONBOARDING_IMAGE_KEYS[step - 1];
 
   try {
-    const db = createAdminClient();
-    const now = new Date().toISOString();
-    const rows: { key: string; value: string; updated_at: string }[] = [];
+    const url = await resolveImageUrlFromForm(formData, {
+      folder: 'onboarding',
+      urlField: 'image_url',
+      fileField: 'image_file',
+    });
 
-    for (let index = 0; index < ONBOARDING_IMAGE_KEYS.length; index += 1) {
-      const key = ONBOARDING_IMAGE_KEYS[index];
-      const step = index + 1;
-      const url = await resolveImageUrlFromForm(formData, {
-        folder: 'onboarding',
-        urlField: `onboarding_image_${step}_url`,
-        fileField: `onboarding_image_${step}_file`,
-      });
-
-      if (!url) {
-        return { ok: false, error: t('settings.onboardingImageRequired', { step: String(step) }) };
-      }
-
-      rows.push({ key, value: url, updated_at: now });
+    if (!url) {
+      return { ok: false, error: t('settings.onboardingImageRequired', { step: String(step) }) };
     }
 
-    const { error } = await db.from('app_settings').upsert(rows, { onConflict: 'key' });
+    const db = createAdminClient();
+    const { error } = await db.from('app_settings').upsert(
+      {
+        key,
+        value: url,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    );
+
     if (error) {
       if (error.message.includes('app_settings') || error.code === '42P01') {
         return { ok: false, error: t('settings.appSettingsMigrationError') };

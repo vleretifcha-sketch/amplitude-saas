@@ -503,6 +503,8 @@ export const fr = {
     cropConfirm: 'Appliquer le recadrage',
     unsupportedFormat: 'Format non supporté. Utilisez JPG, PNG, WebP ou GIF.',
     tooLarge: 'Image trop lourde (max 5 Mo).',
+    payloadTooLarge:
+      'Envoi trop volumineux pour le serveur. Réduisez la photo ou enregistrez une image à la fois.',
     bucketMissing: 'Bucket Supabase manquant : exécute 009_content_images_storage.sql ({{message}})',
   },
   status: {

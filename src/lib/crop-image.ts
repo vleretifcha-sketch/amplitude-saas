@@ -27,15 +27,23 @@ export async function getCroppedImageBlob(
   imageSrc: string,
   pixelCrop: CropArea,
   outputType: 'image/jpeg' | 'image/png' = 'image/jpeg',
-  quality = 0.92
+  quality = 0.82,
+  maxWidth = 1400
 ): Promise<Blob> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas not supported');
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  let { width, height } = pixelCrop;
+  if (maxWidth > 0 && width > maxWidth) {
+    const scale = maxWidth / width;
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+
+  canvas.width = width;
+  canvas.height = height;
 
   ctx.drawImage(
     image,
@@ -45,8 +53,8 @@ export async function getCroppedImageBlob(
     pixelCrop.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    width,
+    height
   );
 
   return new Promise((resolve, reject) => {

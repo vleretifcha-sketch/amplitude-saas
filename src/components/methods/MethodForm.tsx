@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { deleteMethod, upsertMethod } from '@/actions/methods';
+import { isUnexpectedServerActionError } from '@/lib/action-error';
+import { isFormDataUploadTooLarge } from '@/lib/form-upload';
 import { DeleteResourceButton } from '@/components/ui/DeleteResourceButton';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Label, Textarea } from '@/components/ui/Input';
@@ -22,11 +24,19 @@ export function MethodForm({ method }: { method?: Method }) {
   async function onSubmit(formData: FormData) {
     setLoading(true);
     try {
+      if (isFormDataUploadTooLarge(formData)) {
+        toast.error(t('upload.payloadTooLarge'));
+        return;
+      }
       const id = await upsertMethod(formData);
       toast.success(method ? t('toast.saved') : t('toast.created'));
       router.push(`/methods/${id}`);
       router.refresh();
     } catch (e) {
+      if (isUnexpectedServerActionError(e)) {
+        toast.error(t('upload.payloadTooLarge'));
+        return;
+      }
       toast.error(e instanceof Error ? e.message : t('common.error'));
     } finally {
       setLoading(false);

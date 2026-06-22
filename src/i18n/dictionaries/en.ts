@@ -503,6 +503,8 @@ export const en: Dictionary = {
     cropConfirm: 'Apply crop',
     unsupportedFormat: 'Unsupported format. Use JPG, PNG, WebP or GIF.',
     tooLarge: 'Image too large (max 5 MB).',
+    payloadTooLarge:
+      'Upload too large for the server. Use a smaller photo or save one image at a time.',
     bucketMissing: 'Missing Supabase bucket: run 009_content_images_storage.sql ({{message}})',
   },
   status: {
