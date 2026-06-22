@@ -26,6 +26,8 @@ export default async function ProgramDetailPage({
 
   if (!method || !program) notFound();
 
+  const typedProgram = program as Program;
+
   type VideoOption = {
     id: string;
     title: string;
@@ -45,12 +47,12 @@ export default async function ProgramDetailPage({
   return (
     <div>
       <PageHeader
-        title={program.title}
-        description={method.title}
+        title={typedProgram.title}
+        description={typedProgram.description?.trim() || method.title}
         backHref={`/methods/${methodId}`}
       />
       <Card>
-        <ProgramForm methodId={methodId} program={program as Program} videos={catalog} />
+        <ProgramForm methodId={methodId} program={typedProgram} videos={catalog} />
       </Card>
     </div>
   );

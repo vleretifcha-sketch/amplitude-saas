@@ -10,7 +10,7 @@ import {
   type ProgramVideoOption,
 } from '@/components/programs/ProgramSessionsEditor';
 import { Button } from '@/components/ui/Button';
-import { Field, Input, Label } from '@/components/ui/Input';
+import { Field, Input, Label, Textarea } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
 import type { Program } from '@/lib/types';
 
@@ -59,9 +59,13 @@ export function ProgramForm({
   async function onSubmit(formData: FormData) {
     setLoading(true);
     try {
-      const id = await upsertProgram(formData);
+      const result = await upsertProgram(formData);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(program ? t('toast.saved') : t('toast.created'));
-      router.push(`/methods/${methodId}/programs/${id}`);
+      router.push(`/methods/${methodId}/programs/${result.id}`);
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
@@ -79,6 +83,17 @@ export function ProgramForm({
         <Field className="md:col-span-2">
           <Label htmlFor="title">{t('programs.formTitle')}</Label>
           <Input id="title" name="title" defaultValue={program?.title} required />
+        </Field>
+        <Field className="md:col-span-2">
+          <Label htmlFor="description">{t('programs.formDescription')}</Label>
+          <Textarea
+            id="description"
+            name="description"
+            rows={3}
+            defaultValue={program?.description ?? ''}
+            placeholder={t('programs.formDescriptionPlaceholder')}
+          />
+          <p className="mt-1.5 text-xs text-muted">{t('programs.formDescriptionHint')}</p>
         </Field>
         <Field>
           <Label htmlFor="duration_weeks">{t('programs.formDuration')}</Label>

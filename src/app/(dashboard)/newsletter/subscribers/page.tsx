@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/ui/PageHeader';
 import { NewsletterRecipientsTable } from '@/components/newsletter/NewsletterRecipientsTable';
-import { fetchNonPremiumRecipients } from '@/actions/newsletter';
+import { fetchNonPremiumRecipients } from '@/lib/newsletter/server';
 import { createTranslator, getDateLocale, getLocale } from '@/i18n';
 
 export default async function NewsletterSubscribersPage() {

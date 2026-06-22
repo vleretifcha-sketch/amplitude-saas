@@ -23,7 +23,11 @@ export function NewsletterCampaignForm({
   async function onSaveDraft(formData: FormData) {
     setSavingDraft(true);
     try {
-      await saveNewsletterDraft(formData);
+      const result = await saveNewsletterDraft(formData);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(t('newsletter.draftSaved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
@@ -46,10 +50,14 @@ export function NewsletterCampaignForm({
     setSending(true);
     try {
       const result = await sendNewsletterCampaign(formData);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(
         t('newsletter.sentToast', {
-          sent: result.sentCount,
-          total: result.recipientCount,
+          sent: result.sentCount ?? 0,
+          total: result.recipientCount ?? 0,
         })
       );
     } catch (e) {

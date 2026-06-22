@@ -17,17 +17,27 @@ function parseIdList(raw: FormDataEntryValue | null): string[] {
   }
 }
 
-export async function upsertProgram(formData: FormData): Promise<string> {
+export type UpsertProgramResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string };
+
+function stripDescription<T extends { description?: string | null }>(row: T): Omit<T, 'description'> {
+  const { description: _description, ...rest } = row;
+  return rest;
+}
+
+export async function upsertProgram(formData: FormData): Promise<UpsertProgramResult> {
   const db = createAdminClient();
   const existingId = String(formData.get('id') || '').trim();
   const methodId = String(formData.get('method_id') || '').trim();
   const title = String(formData.get('title')).trim();
+  const description = String(formData.get('description') || '').trim() || null;
   const signatureSessionIds = parseIdList(formData.get('signature_session_ids'));
   const complementarySessionIds = parseIdList(formData.get('complementary_session_ids'));
   const mobilitySessionIds = parseIdList(formData.get('mobility_session_ids'));
   const sessionSectionOrder = getSessionSectionOrder();
 
-  if (!methodId) throw new Error('method_id is required');
+  if (!methodId) return { ok: false, error: 'method_id is required' };
 
   const id = existingId || (await uniqueId(db, 'programs', 'prog-', title));
 
@@ -35,6 +45,7 @@ export async function upsertProgram(formData: FormData): Promise<string> {
     id,
     method_id: methodId,
     title,
+    description,
     duration_weeks: Number(formData.get('duration_weeks') || 4),
     signature_session_id: signatureSessionIds[0] ?? null,
     complementary_session_ids: complementarySessionIds,
@@ -62,15 +73,38 @@ export async function upsertProgram(formData: FormData): Promise<string> {
     ({ error } = await db.from('programs').upsert(baseRow));
     if (!error && signatureSessionIds.length > 1) {
       const t = createTranslator(await getLocale());
-      throw new Error(t('programs.migrationError'));
+      return { ok: false, error: t('programs.migrationError') };
+    }
+  }
+
+  if (error?.message.includes('description')) {
+    for (const candidate of [
+      stripDescription(rowWithMobility),
+      stripDescription(rowWithSignatures),
+      stripDescription(baseRow),
+    ]) {
+      const attempt = await db.from('programs').upsert(candidate);
+      if (!attempt.error) {
+        error = null;
+        break;
+      }
+      error = attempt.error;
+    }
+
+    if (!error) {
+      const t = createTranslator(await getLocale());
+      return { ok: false, error: t('programs.descriptionMigrationError') };
     }
   }
 
   if (error?.message.includes('method_id')) {
-    throw new Error('Migration Supabase manquante : exécute 017_methods_hierarchy.sql');
+    return {
+      ok: false,
+      error: 'Migration Supabase manquante : exécute 017_methods_hierarchy.sql',
+    };
   }
 
-  if (error) throw new Error(error.message);
+  if (error) return { ok: false, error: error.message };
 
   const selectedVideoIds = [...signatureSessionIds, ...mobilitySessionIds, ...complementarySessionIds];
   if (selectedVideoIds.length > 0) {
@@ -78,7 +112,7 @@ export async function upsertProgram(formData: FormData): Promise<string> {
       .from('videos')
       .update({ program_id: id, updated_at: new Date().toISOString() })
       .in('id', selectedVideoIds);
-    if (videoError) throw new Error(videoError.message);
+    if (videoError) return { ok: false, error: videoError.message };
   }
 
   revalidatePath('/methods');
@@ -86,7 +120,7 @@ export async function upsertProgram(formData: FormData): Promise<string> {
   revalidatePath(`/methods/${methodId}/programs/${id}`);
   revalidatePath('/videos');
   revalidatePath('/');
-  return id;
+  return { ok: true, id };
 }
 
 export async function deleteProgram(methodId: string, programId: string) {

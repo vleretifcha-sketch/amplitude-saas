@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { fetchNewsletterCampaigns } from '@/actions/newsletter';
+import { fetchNewsletterCampaigns } from '@/lib/newsletter/server';
 import { createTranslator, getDateLocale, getLocale } from '@/i18n';
 import type { NewsletterCampaignStatus } from '@/lib/types';
 

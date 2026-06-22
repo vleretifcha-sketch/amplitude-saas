@@ -9,6 +9,8 @@ export const IMAGE_CROP_ASPECT = {
   /** Cartes méthodes dans l'app (~3:2, pleine largeur × 240px). */
   programCover: 3 / 2,
   sessionThumbnail: 1,
+  /** Écran onboarding mobile (portrait plein écran). */
+  onboardingPortrait: 9 / 16,
 } as const;
 
 function createImage(url: string): Promise<HTMLImageElement> {

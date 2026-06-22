@@ -94,17 +94,53 @@ type OutboundEmail = {
   text: string;
 };
 
-export async function sendBatchEmails(
-  emails: OutboundEmail[],
-  from: string
-): Promise<{ sent: number; failed: number }> {
-  const apiKey = await getResendApiKey();
-  if (!apiKey) {
-    throw new Error('Resend is not connected. Add your API key in Settings.');
+type SendBatchResult = {
+  sent: number;
+  failed: number;
+  lastError: string | null;
+};
+
+function parseResendError(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { message?: string; error?: { message?: string } };
+    return parsed.message ?? parsed.error?.message ?? body;
+  } catch {
+    return body || 'Failed to send emails via Resend.';
+  }
+}
+
+async function sendSingleEmail(
+  apiKey: string,
+  from: string,
+  email: OutboundEmail
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const response = await fetch(`${RESEND_API_URL}/emails`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [email.to],
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+    }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: parseResendError(await response.text()) };
   }
 
-  if (emails.length === 0) return { sent: 0, failed: 0 };
+  return { ok: true };
+}
 
+async function sendBatchChunk(
+  apiKey: string,
+  from: string,
+  emails: OutboundEmail[]
+): Promise<SendBatchResult> {
   const batchPayload = emails.map((email) => ({
     from,
     to: [email.to],
@@ -122,12 +158,42 @@ export async function sendBatchEmails(
     body: JSON.stringify(batchPayload),
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(errorBody || 'Failed to send emails via Resend.');
+  if (response.ok) {
+    return { sent: emails.length, failed: 0, lastError: null };
   }
 
-  return { sent: emails.length, failed: 0 };
+  const batchError = parseResendError(await response.text());
+
+  // Resend batch is atomic: one invalid recipient fails the whole chunk.
+  let sent = 0;
+  let failed = 0;
+  let lastError = batchError;
+
+  for (const email of emails) {
+    const result = await sendSingleEmail(apiKey, from, email);
+    if (result.ok) {
+      sent += 1;
+    } else {
+      failed += 1;
+      lastError = result.error;
+    }
+  }
+
+  return { sent, failed, lastError };
+}
+
+export async function sendBatchEmails(
+  emails: OutboundEmail[],
+  from: string
+): Promise<SendBatchResult> {
+  const apiKey = await getResendApiKey();
+  if (!apiKey) {
+    throw new Error('Resend is not connected. Add your API key in Settings.');
+  }
+
+  if (emails.length === 0) return { sent: 0, failed: 0, lastError: null };
+
+  return sendBatchChunk(apiKey, from, emails);
 }
 
 export async function getNewsletterSender(): Promise<{ from: string; fromEmail: string; fromName: string | null }> {

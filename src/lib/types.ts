@@ -24,6 +24,7 @@ export type Program = {
   id: string;
   method_id: string;
   title: string;
+  description: string | null;
   duration_weeks: number;
   signature_session_id: string | null;
   signature_session_ids: string[];
@@ -49,6 +50,7 @@ export type Video = {
   order_in_week: number;
   status: VideoStatus;
   published_at: string | null;
+  is_premium: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -122,14 +124,40 @@ export type Subscription = {
   created_at: string;
 };
 
-export type CommunityPost = {
+export type CommunityPostAuthor = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+};
+
+export type CommunityCommentAdmin = {
+  id: string;
+  post_id: string;
+  content: string;
+  created_at: string;
+  author: CommunityPostAuthor;
+};
+
+export type CommunityPostAdmin = {
   id: string;
   user_id: string;
   content: string;
   image_url: string | null;
+  program_title: string | null;
+  session_title: string | null;
   created_at: string;
-  author_email?: string;
-  author_name?: string;
+  likes: number;
+  comments_count: number;
+  author: CommunityPostAuthor;
+  comments: CommunityCommentAdmin[];
+};
+
+export type CommunityStats = {
+  totalPosts: number;
+  postsThisWeek: number;
+  totalComments: number;
 };
 
 export type DashboardStats = {

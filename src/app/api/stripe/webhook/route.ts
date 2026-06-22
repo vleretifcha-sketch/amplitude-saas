@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await handleStripeWebhookEvent(event);
+    await handleStripeWebhookEvent(event, stripe);
     return NextResponse.json({ received: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Webhook handler failed';

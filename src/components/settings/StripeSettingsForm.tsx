@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input, Label } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useLocale } from '@/i18n/client';
-import type { StripeConnectionStatus } from '@/actions/settings';
+import type { StripeConnectionStatus } from '@/lib/settings/server';
 
 export function StripeSettingsForm({ status }: { status: StripeConnectionStatus }) {
   const { t } = useLocale();
@@ -17,7 +17,11 @@ export function StripeSettingsForm({ status }: { status: StripeConnectionStatus 
   async function onSubmit(formData: FormData) {
     setLoading(true);
     try {
-      await saveStripeSecretKey(formData);
+      const result = await saveStripeSecretKey(formData);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(t('toast.saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
@@ -30,7 +34,11 @@ export function StripeSettingsForm({ status }: { status: StripeConnectionStatus 
     if (!window.confirm(t('settings.stripeDisconnectConfirm'))) return;
     setDisconnecting(true);
     try {
-      await disconnectStripe();
+      const result = await disconnectStripe();
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(t('settings.stripeDisconnected'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));

@@ -2,131 +2,200 @@
 
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { encryptSetting, maskSecretKey } from '@/lib/settings-crypto';
+import { encryptSetting } from '@/lib/settings-crypto';
+import { createTranslator, getLocale } from '@/i18n';
 import {
   getStripeSecretKey,
-  isStripeConnected,
   STRIPE_SECRET_SETTING_KEY,
 } from '@/lib/stripe/server';
 import {
-  getEmailConnectionStatus as getEmailStatus,
   getResendApiKey,
   NEWSLETTER_FROM_EMAIL_SETTING,
   NEWSLETTER_FROM_NAME_SETTING,
   RESEND_API_KEY_SETTING,
-  type EmailConnectionStatus,
 } from '@/lib/email/server';
+import { ONBOARDING_IMAGE_KEYS } from '@/lib/onboarding/server';
+import { resolveImageUrlFromForm } from '@/lib/upload-image';
 
-export type StripeConnectionStatus = {
-  connected: boolean;
-  maskedKey: string | null;
-};
+export type SettingsActionResult = { ok: true } | { ok: false; error: string };
 
-export async function getStripeConnectionStatus(): Promise<StripeConnectionStatus> {
-  const secretKey = await getStripeSecretKey();
-  if (!secretKey) {
-    return { connected: false, maskedKey: null };
+function settingsError(error: unknown, fallback: string): SettingsActionResult {
+  if (error instanceof Error) {
+    if (error.message.includes('SETTINGS_ENCRYPTION_KEY')) {
+      return { ok: false, error: fallback };
+    }
+    if (error.message.includes('app_settings') || error.message.includes('42P01')) {
+      return { ok: false, error: fallback };
+    }
+    return { ok: false, error: error.message };
   }
-
-  const connected = await isStripeConnected();
-  return {
-    connected,
-    maskedKey: maskSecretKey(secretKey),
-  };
+  return { ok: false, error: fallback };
 }
 
-export async function saveStripeSecretKey(formData: FormData) {
+export async function saveStripeSecretKey(formData: FormData): Promise<SettingsActionResult> {
+  const t = createTranslator(await getLocale());
   const rawKey = String(formData.get('stripe_secret_key') || '').trim();
+
   if (!rawKey.startsWith('sk_test_') && !rawKey.startsWith('sk_live_')) {
-    throw new Error('Invalid Stripe secret key format.');
+    return { ok: false, error: t('settings.stripeInvalidKey') };
   }
 
-  const db = createAdminClient();
-  const encrypted = encryptSetting(rawKey);
+  try {
+    const db = createAdminClient();
+    const encrypted = encryptSetting(rawKey);
 
-  const { error } = await db.from('app_settings').upsert(
-    {
-      key: STRIPE_SECRET_SETTING_KEY,
-      value: encrypted,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'key' }
-  );
+    const { error } = await db.from('app_settings').upsert(
+      {
+        key: STRIPE_SECRET_SETTING_KEY,
+        value: encrypted,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    );
 
-  if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.includes('app_settings') || error.code === '42P01') {
+        return { ok: false, error: t('settings.appSettingsMigrationError') };
+      }
+      return { ok: false, error: error.message };
+    }
 
-  revalidatePath('/settings');
-  revalidatePath('/users');
+    revalidatePath('/settings');
+    revalidatePath('/users');
+    return { ok: true };
+  } catch (error) {
+    return settingsError(error, t('settings.encryptionKeyMissing'));
+  }
 }
 
-export async function disconnectStripe() {
-  const db = createAdminClient();
-  const { error } = await db.from('app_settings').delete().eq('key', STRIPE_SECRET_SETTING_KEY);
-  if (error) throw new Error(error.message);
+export async function disconnectStripe(): Promise<SettingsActionResult> {
+  const t = createTranslator(await getLocale());
 
-  revalidatePath('/settings');
-  revalidatePath('/users');
+  try {
+    const db = createAdminClient();
+    const { error } = await db.from('app_settings').delete().eq('key', STRIPE_SECRET_SETTING_KEY);
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath('/settings');
+    revalidatePath('/users');
+    return { ok: true };
+  } catch (error) {
+    return settingsError(error, t('common.error'));
+  }
 }
 
-export async function getEmailConnectionStatus(): Promise<EmailConnectionStatus> {
-  return getEmailStatus();
-}
-
-export async function saveEmailSettings(formData: FormData) {
+export async function saveEmailSettings(formData: FormData): Promise<SettingsActionResult> {
+  const t = createTranslator(await getLocale());
   const rawKey = String(formData.get('resend_api_key') || '').trim();
   const fromEmail = String(formData.get('newsletter_from_email') || '').trim();
   const fromName = String(formData.get('newsletter_from_name') || '').trim();
 
   if (!fromEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
-    throw new Error('Invalid sender email address.');
+    return { ok: false, error: t('settings.emailInvalidAddress') };
   }
 
-  const db = createAdminClient();
-  const rows: { key: string; value: string; updated_at: string }[] = [
-    {
-      key: NEWSLETTER_FROM_EMAIL_SETTING,
-      value: fromEmail,
-      updated_at: new Date().toISOString(),
-    },
-    {
-      key: NEWSLETTER_FROM_NAME_SETTING,
-      value: fromName,
-      updated_at: new Date().toISOString(),
-    },
-  ];
+  try {
+    const db = createAdminClient();
+    const rows: { key: string; value: string; updated_at: string }[] = [
+      {
+        key: NEWSLETTER_FROM_EMAIL_SETTING,
+        value: fromEmail,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        key: NEWSLETTER_FROM_NAME_SETTING,
+        value: fromName,
+        updated_at: new Date().toISOString(),
+      },
+    ];
 
-  if (rawKey) {
-    if (!rawKey.startsWith('re_')) {
-      throw new Error('Invalid Resend API key format.');
+    if (rawKey) {
+      if (!rawKey.startsWith('re_')) {
+        return { ok: false, error: t('settings.emailInvalidKey') };
+      }
+      rows.push({
+        key: RESEND_API_KEY_SETTING,
+        value: encryptSetting(rawKey),
+        updated_at: new Date().toISOString(),
+      });
+    } else {
+      const existingKey = await getResendApiKey();
+      if (!existingKey) {
+        return { ok: false, error: t('settings.emailKeyRequired') };
+      }
     }
-    rows.push({
-      key: RESEND_API_KEY_SETTING,
-      value: encryptSetting(rawKey),
-      updated_at: new Date().toISOString(),
-    });
-  } else {
-    const existingKey = await getResendApiKey();
-    if (!existingKey) {
-      throw new Error('Resend API key is required.');
+
+    const { error } = await db.from('app_settings').upsert(rows, { onConflict: 'key' });
+    if (error) {
+      if (error.message.includes('app_settings') || error.code === '42P01') {
+        return { ok: false, error: t('settings.appSettingsMigrationError') };
+      }
+      return { ok: false, error: error.message };
     }
+
+    revalidatePath('/settings');
+    revalidatePath('/newsletter');
+    return { ok: true };
+  } catch (error) {
+    return settingsError(error, t('settings.encryptionKeyMissing'));
   }
-
-  const { error } = await db.from('app_settings').upsert(rows, { onConflict: 'key' });
-  if (error) throw new Error(error.message);
-
-  revalidatePath('/settings');
-  revalidatePath('/newsletter');
 }
 
-export async function disconnectEmail() {
-  const db = createAdminClient();
-  const { error } = await db
-    .from('app_settings')
-    .delete()
-    .in('key', [RESEND_API_KEY_SETTING, NEWSLETTER_FROM_EMAIL_SETTING, NEWSLETTER_FROM_NAME_SETTING]);
+export async function disconnectEmail(): Promise<SettingsActionResult> {
+  const t = createTranslator(await getLocale());
 
-  if (error) throw new Error(error.message);
+  try {
+    const db = createAdminClient();
+    const { error } = await db
+      .from('app_settings')
+      .delete()
+      .in('key', [RESEND_API_KEY_SETTING, NEWSLETTER_FROM_EMAIL_SETTING, NEWSLETTER_FROM_NAME_SETTING]);
 
-  revalidatePath('/settings');
-  revalidatePath('/newsletter');
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath('/settings');
+    revalidatePath('/newsletter');
+    return { ok: true };
+  } catch (error) {
+    return settingsError(error, t('common.error'));
+  }
+}
+
+export async function saveOnboardingImages(formData: FormData): Promise<SettingsActionResult> {
+  const t = createTranslator(await getLocale());
+
+  try {
+    const db = createAdminClient();
+    const now = new Date().toISOString();
+    const rows: { key: string; value: string; updated_at: string }[] = [];
+
+    for (let index = 0; index < ONBOARDING_IMAGE_KEYS.length; index += 1) {
+      const key = ONBOARDING_IMAGE_KEYS[index];
+      const step = index + 1;
+      const url = await resolveImageUrlFromForm(formData, {
+        folder: 'onboarding',
+        urlField: `onboarding_image_${step}_url`,
+        fileField: `onboarding_image_${step}_file`,
+      });
+
+      if (!url) {
+        return { ok: false, error: t('settings.onboardingImageRequired', { step: String(step) }) };
+      }
+
+      rows.push({ key, value: url, updated_at: now });
+    }
+
+    const { error } = await db.from('app_settings').upsert(rows, { onConflict: 'key' });
+    if (error) {
+      if (error.message.includes('app_settings') || error.code === '42P01') {
+        return { ok: false, error: t('settings.appSettingsMigrationError') };
+      }
+      return { ok: false, error: error.message };
+    }
+
+    revalidatePath('/settings');
+    return { ok: true };
+  } catch (error) {
+    return settingsError(error, t('common.error'));
+  }
 }

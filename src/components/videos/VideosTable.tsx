@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { SortableTableHead, useTableSort } from '@/components/ui/SortableTableHead';
+import { VideoPremiumSwitch } from '@/components/videos/VideoPremiumSwitch';
 import { useLocale } from '@/i18n/client';
 import { translateStatus } from '@/i18n/translator';
 import { compareNumber, compareText, type SortDirection } from '@/lib/sort';
@@ -42,6 +43,8 @@ function sortVideos(
         return compareNumber(a.exerciseCount, b.exerciseCount, direction);
       case 'week':
         return compareNumber(a.week_number, b.week_number, direction);
+      case 'access':
+        return compareNumber(a.is_premium ? 1 : 0, b.is_premium ? 1 : 0, direction);
       case 'title':
       default:
         return compareText(a.title, b.title, direction);
@@ -107,6 +110,13 @@ export function VideosTable({ videos }: { videos: VideoRow[] }) {
               onSort={toggleSort}
             />
             <SortableTableHead
+              label={t('videos.colAccess')}
+              columnKey="access"
+              sortKey={sortKey}
+              sortDirection={sortDirection}
+              onSort={toggleSort}
+            />
+            <SortableTableHead
               label={t('videos.colWeek')}
               columnKey="week"
               sortKey={sortKey}
@@ -129,6 +139,9 @@ export function VideosTable({ videos }: { videos: VideoRow[] }) {
                 <Badge tone={statusTone[video.status]}>{translateStatus(t, video.status)}</Badge>
               </td>
               <td className="px-6 py-4 text-secondary">{video.exerciseLabel}</td>
+              <td className="px-6 py-4">
+                <VideoPremiumSwitch videoId={video.id} isPremium={video.is_premium} />
+              </td>
               <td className="px-6 py-4">
                 {t('common.weekShort')}
                 {video.week_number}

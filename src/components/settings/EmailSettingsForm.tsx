@@ -17,7 +17,11 @@ export function EmailSettingsForm({ status }: { status: EmailConnectionStatus })
   async function onSubmit(formData: FormData) {
     setLoading(true);
     try {
-      await saveEmailSettings(formData);
+      const result = await saveEmailSettings(formData);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(t('toast.saved'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
@@ -30,7 +34,11 @@ export function EmailSettingsForm({ status }: { status: EmailConnectionStatus })
     if (!window.confirm(t('settings.emailDisconnectConfirm'))) return;
     setDisconnecting(true);
     try {
-      await disconnectEmail();
+      const result = await disconnectEmail();
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(t('settings.emailDisconnected'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('common.error'));
