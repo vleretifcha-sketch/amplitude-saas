@@ -88,11 +88,27 @@ export async function revokeUserSubscription(userId: string) {
   const db = createAdminClient();
   const now = new Date().toISOString();
 
+  const { data: profile } = await db
+    .from('profiles')
+    .select('stripe_subscription_id')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (profile?.stripe_subscription_id) {
+    try {
+      const stripe = await getStripeClient();
+      await stripe.subscriptions.cancel(profile.stripe_subscription_id);
+    } catch {
+      /* Le profil sera quand même passé en gratuit côté app */
+    }
+  }
+
   const { error: profileError } = await db
     .from('profiles')
     .update({
       subscription_status: 'none',
       subscription_expires_at: null,
+      stripe_subscription_id: null,
       updated_at: now,
     })
     .eq('id', userId);
