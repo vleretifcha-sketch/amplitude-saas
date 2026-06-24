@@ -1,4 +1,8 @@
-import { getEmailConnectionStatus, type EmailConnectionStatus } from '@/lib/email/server';
+import {
+  getDefaultNewsletterFooterLogoUrl,
+  getEmailConnectionStatus,
+  type EmailConnectionStatus,
+} from '@/lib/email/server';
 import { maskSecretKey } from '@/lib/settings-crypto';
 import { getStripeSecretKey, isStripeConnected } from '@/lib/stripe/server';
 
@@ -35,6 +39,7 @@ export async function getEmailSettingsStatus(): Promise<EmailConnectionStatus> {
       fromEmail: null,
       fromName: null,
       hasApiKey: false,
+      footerLogoUrl: getDefaultNewsletterFooterLogoUrl(),
     };
   }
 }

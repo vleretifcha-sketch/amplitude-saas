@@ -11,6 +11,8 @@ export const IMAGE_CROP_ASPECT = {
   sessionThumbnail: 1,
   /** Écran onboarding mobile (portrait plein écran). */
   onboardingPortrait: 9 / 16,
+  /** Logo Amplitude (~1024×422). */
+  brandLogo: 1024 / 422,
 } as const;
 
 function createImage(url: string): Promise<HTMLImageElement> {

@@ -1,9 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { decryptSetting } from '@/lib/settings-crypto';
+import { getPublicAppUrl } from '@/lib/app-url';
 
 export const RESEND_API_KEY_SETTING = 'resend_api_key';
 export const NEWSLETTER_FROM_EMAIL_SETTING = 'newsletter_from_email';
 export const NEWSLETTER_FROM_NAME_SETTING = 'newsletter_from_name';
+export const NEWSLETTER_FOOTER_LOGO_URL_SETTING = 'newsletter_footer_logo_url';
 
 const RESEND_API_URL = 'https://api.resend.com';
 
@@ -12,6 +14,7 @@ export type EmailConnectionStatus = {
   fromEmail: string | null;
   fromName: string | null;
   hasApiKey: boolean;
+  footerLogoUrl: string;
 };
 
 async function getSettingValue(key: string): Promise<string | null> {
@@ -39,11 +42,21 @@ export async function getNewsletterFromName(): Promise<string | null> {
   return getSettingValue(NEWSLETTER_FROM_NAME_SETTING);
 }
 
+export function getDefaultNewsletterFooterLogoUrl(): string {
+  return `${getPublicAppUrl()}/amplitude-logo.jpg`;
+}
+
+export async function getNewsletterFooterLogoUrl(): Promise<string> {
+  const custom = await getSettingValue(NEWSLETTER_FOOTER_LOGO_URL_SETTING);
+  return custom || getDefaultNewsletterFooterLogoUrl();
+}
+
 export async function getEmailConnectionStatus(): Promise<EmailConnectionStatus> {
-  const [apiKey, fromEmail, fromName] = await Promise.all([
+  const [apiKey, fromEmail, fromName, footerLogoUrl] = await Promise.all([
     getResendApiKey(),
     getNewsletterFromEmail(),
     getNewsletterFromName(),
+    getNewsletterFooterLogoUrl(),
   ]);
 
   return {
@@ -51,6 +64,7 @@ export async function getEmailConnectionStatus(): Promise<EmailConnectionStatus>
     fromEmail,
     fromName,
     hasApiKey: Boolean(apiKey),
+    footerLogoUrl,
   };
 }
 
@@ -75,16 +89,49 @@ export function formatFromAddress(email: string, name?: string | null): string {
   return email;
 }
 
-export function textToHtml(body: string, preview?: string | null): string {
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function isSafeImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+export function buildCampaignHtml(
+  body: string,
+  preview?: string | null,
+  footerLogoUrl?: string | null
+): string {
   const escaped = body
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>');
   const preheader = preview?.trim()
-    ? `<span style="display:none;max-height:0;overflow:hidden">${preview.trim()}</span>`
+    ? `<span style="display:none;max-height:0;overflow:hidden">${escapeHtml(preview.trim())}</span>`
     : '';
-  return `${preheader}<div style="font-family:sans-serif;line-height:1.6;color:#111">${escaped}</div>`;
+  const logoUrl = footerLogoUrl?.trim();
+  const footer =
+    logoUrl && isSafeImageUrl(logoUrl)
+      ? `<div style="margin-top:32px;padding-top:24px;border-top:1px solid #e5e5e5;text-align:center">
+           <img src="${escapeHtml(logoUrl)}" alt="Amplitude" width="140" style="max-width:140px;width:140px;height:auto;display:inline-block;border:0" />
+         </div>`
+      : '';
+  return `${preheader}<div style="font-family:sans-serif;line-height:1.6;color:#111;max-width:600px">${escaped}${footer}</div>`;
+}
+
+/** @deprecated Use buildCampaignHtml for newsletter sends. */
+export function textToHtml(body: string, preview?: string | null): string {
+  return buildCampaignHtml(body, preview);
 }
 
 type OutboundEmail = {

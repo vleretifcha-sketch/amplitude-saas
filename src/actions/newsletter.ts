@@ -5,7 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import {
   getNewsletterSender,
   sendBatchEmails,
-  textToHtml,
+  buildCampaignHtml,
+  getNewsletterFooterLogoUrl,
 } from '@/lib/email/server';
 import type { NewsletterCampaign, NewsletterRecipient } from '@/lib/types';
 
@@ -122,7 +123,8 @@ export async function sendNewsletterCampaign(formData: FormData) {
     }
 
     const db = createAdminClient();
-    const html = textToHtml(body, preview);
+    const footerLogoUrl = await getNewsletterFooterLogoUrl();
+    const html = buildCampaignHtml(body, preview, footerLogoUrl);
     let sentCount = 0;
     let failedCount = 0;
     let lastError: string | null = null;

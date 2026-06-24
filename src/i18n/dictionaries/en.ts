@@ -364,7 +364,8 @@ export const en: Dictionary = {
     saveDraft: 'Save draft',
     sendCampaign: 'Send campaign',
     sending: 'Sending…',
-    sendHint: 'Emails are sent via Resend from the address configured in Settings.',
+    sendHint:
+      'Emails are sent via Resend from the address configured in Settings. The Amplitude logo appears in the footer (editable in Settings → Email sending).',
     recipientsHint: 'This campaign will be sent to {{count}} free user(s).',
     emailNotConfigured: 'Connect Resend and the sender email in Settings before sending.',
     openSettings: 'Open Settings',
@@ -425,6 +426,9 @@ export const en: Dictionary = {
     resendApiKey: 'Resend API key',
     newsletterFromEmail: 'Sender email',
     newsletterFromName: 'Display name (optional)',
+    newsletterFooterLogo: 'Footer logo (campaigns)',
+    newsletterFooterLogoHint:
+      'Shown at the bottom of each campaign email. Defaults to the Amplitude back-office logo. You can replace it with another image.',
     emailKeyHint:
       'Create a key at resend.com/api-keys. The sender address must be verified in Resend (domain or test address).',
     emailConnected: 'Email connected',

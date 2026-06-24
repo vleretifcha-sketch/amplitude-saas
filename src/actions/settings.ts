@@ -10,8 +10,10 @@ import {
 } from '@/lib/stripe/server';
 import {
   getResendApiKey,
+  getDefaultNewsletterFooterLogoUrl,
   NEWSLETTER_FROM_EMAIL_SETTING,
   NEWSLETTER_FROM_NAME_SETTING,
+  NEWSLETTER_FOOTER_LOGO_URL_SETTING,
   RESEND_API_KEY_SETTING,
 } from '@/lib/email/server';
 import { ONBOARDING_IMAGE_KEYS } from '@/lib/onboarding/server';
@@ -108,6 +110,17 @@ export async function saveEmailSettings(formData: FormData): Promise<SettingsAct
         updated_at: new Date().toISOString(),
       },
     ];
+
+    const footerLogoUrl = await resolveImageUrlFromForm(formData, {
+      folder: 'newsletter',
+      urlField: 'newsletter_footer_logo_url',
+      fileField: 'newsletter_footer_logo_file',
+    });
+    rows.push({
+      key: NEWSLETTER_FOOTER_LOGO_URL_SETTING,
+      value: footerLogoUrl || getDefaultNewsletterFooterLogoUrl(),
+      updated_at: new Date().toISOString(),
+    });
 
     if (rawKey) {
       if (!rawKey.startsWith('re_')) {

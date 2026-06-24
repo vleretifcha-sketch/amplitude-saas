@@ -364,7 +364,8 @@ export const fr = {
     saveDraft: 'Enregistrer le brouillon',
     sendCampaign: 'Envoyer la campagne',
     sending: 'Envoi en cours…',
-    sendHint: 'Les emails partent via Resend depuis l’adresse configurée dans Paramètres.',
+    sendHint:
+      'Les emails partent via Resend depuis l’adresse configurée dans Paramètres. Le logo Amplitude apparaît en pied de page (modifiable dans Paramètres → Envoi d’emails).',
     recipientsHint: 'Cette campagne sera envoyée à {{count}} utilisateur(s) gratuit(s).',
     emailNotConfigured: 'Connectez Resend et l’email d’expédition dans Paramètres avant d’envoyer.',
     openSettings: 'Ouvrir Paramètres',
@@ -425,6 +426,9 @@ export const fr = {
     resendApiKey: 'Clé API Resend',
     newsletterFromEmail: 'Email d’expédition',
     newsletterFromName: 'Nom affiché (optionnel)',
+    newsletterFooterLogo: 'Logo pied de page (campagnes)',
+    newsletterFooterLogoHint:
+      'Affiché en bas de chaque email de campagne. Par défaut : logo Amplitude du back-office. Vous pouvez le remplacer par une autre image.',
     emailKeyHint:
       'Créez une clé sur resend.com/api-keys. L’adresse d’expédition doit être vérifiée dans Resend (domaine ou adresse de test).',
     emailConnected: 'Email connecté',

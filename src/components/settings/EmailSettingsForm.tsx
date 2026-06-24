@@ -3,9 +3,13 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { disconnectEmail, saveEmailSettings } from '@/actions/settings';
+import { isUnexpectedServerActionError } from '@/lib/action-error';
+import { isFormDataUploadTooLarge } from '@/lib/form-upload';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Label } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { IMAGE_CROP_ASPECT } from '@/lib/crop-image';
 import { useLocale } from '@/i18n/client';
 import type { EmailConnectionStatus } from '@/lib/email/server';
 
@@ -17,6 +21,10 @@ export function EmailSettingsForm({ status }: { status: EmailConnectionStatus })
   async function onSubmit(formData: FormData) {
     setLoading(true);
     try {
+      if (isFormDataUploadTooLarge(formData)) {
+        toast.error(t('upload.payloadTooLarge'));
+        return;
+      }
       const result = await saveEmailSettings(formData);
       if (!result.ok) {
         toast.error(result.error);
@@ -24,6 +32,10 @@ export function EmailSettingsForm({ status }: { status: EmailConnectionStatus })
       }
       toast.success(t('toast.saved'));
     } catch (e) {
+      if (isUnexpectedServerActionError(e)) {
+        toast.error(t('upload.payloadTooLarge'));
+        return;
+      }
       toast.error(e instanceof Error ? e.message : t('common.error'));
     } finally {
       setLoading(false);
@@ -60,7 +72,7 @@ export function EmailSettingsForm({ status }: { status: EmailConnectionStatus })
         ) : null}
       </div>
 
-      <form action={onSubmit} className="space-y-4">
+      <form action={onSubmit} encType="multipart/form-data" className="space-y-4">
         <Field>
           <Label htmlFor="resend_api_key">{t('settings.resendApiKey')}</Label>
           <Input
@@ -95,6 +107,14 @@ export function EmailSettingsForm({ status }: { status: EmailConnectionStatus })
             defaultValue={status.fromName ?? ''}
           />
         </Field>
+        <ImageUploadField
+          label={t('settings.newsletterFooterLogo')}
+          urlFieldName="newsletter_footer_logo_url"
+          fileFieldName="newsletter_footer_logo_file"
+          defaultUrl={status.footerLogoUrl}
+          cropAspect={IMAGE_CROP_ASPECT.brandLogo}
+        />
+        <p className="text-sm text-muted">{t('settings.newsletterFooterLogoHint')}</p>
         <p className="text-sm text-muted">{t('settings.emailKeyHint')}</p>
         <div className="flex flex-wrap gap-3">
           <Button type="submit" disabled={loading}>
