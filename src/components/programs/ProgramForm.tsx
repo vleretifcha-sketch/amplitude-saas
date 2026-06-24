@@ -9,22 +9,11 @@ import {
   ProgramSessionsEditor,
   type ProgramVideoOption,
 } from '@/components/programs/ProgramSessionsEditor';
+import { resolveProgramSessionIds } from '@/lib/program-session-ids';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Label, Textarea } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
 import type { Program } from '@/lib/types';
-
-function idsForProgram(
-  linked: string[] | undefined,
-  legacySingle: string | null | undefined,
-  videos: ProgramVideoOption[],
-  programId: string,
-  type: ProgramVideoOption['type']
-) {
-  if (linked?.length) return linked;
-  if (legacySingle) return [legacySingle];
-  return videos.filter((v) => v.programId === programId && v.type === type).map((v) => v.id);
-}
 
 export function ProgramForm({
   methodId,
@@ -40,21 +29,10 @@ export function ProgramForm({
   const [loading, setLoading] = useState(false);
   const programId = program?.id ?? '';
 
-  const signatureIds = program
-    ? idsForProgram(
-        program.signature_session_ids,
-        program.signature_session_id,
-        videos,
-        programId,
-        'signature'
-      )
-    : [];
-
-  const complementaryIds = program
-    ? idsForProgram(program.complementary_session_ids, null, videos, programId, 'complementary')
-    : [];
-
-  const mobilityIds = program?.mobility_session_ids?.filter(Boolean) ?? [];
+  const sessionIds = program
+    ? resolveProgramSessionIds(program, videos, programId)
+    : { signatureIds: [], mobilityIds: [], complementaryIds: [] };
+  const { signatureIds, mobilityIds, complementaryIds } = sessionIds;
 
   async function onSubmit(formData: FormData) {
     setLoading(true);

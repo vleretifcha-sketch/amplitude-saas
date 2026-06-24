@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { uniqueId } from '@/lib/slug';
 import { createTranslator, getLocale } from '@/i18n';
 import { getSessionSectionOrder } from '@/lib/session-section-order';
+import { sanitizeSessionIdsByVideoType } from '@/lib/program-session-ids';
 
 function parseIdList(raw: FormDataEntryValue | null): string[] {
   if (!raw) return [];
@@ -41,22 +42,34 @@ export async function upsertProgram(formData: FormData): Promise<UpsertProgramRe
 
   const id = existingId || (await uniqueId(db, 'programs', 'prog-', title));
 
+  const sanitized = await sanitizeSessionIdsByVideoType(
+    db,
+    signatureSessionIds,
+    mobilitySessionIds,
+    complementarySessionIds
+  );
+  const {
+    signatureSessionIds: cleanSignatureIds,
+    mobilitySessionIds: cleanMobilityIds,
+    complementarySessionIds: cleanComplementaryIds,
+  } = sanitized;
+
   const baseRow = {
     id,
     method_id: methodId,
     title,
     description,
     duration_weeks: Number(formData.get('duration_weeks') || 4),
-    signature_session_id: signatureSessionIds[0] ?? null,
-    complementary_session_ids: complementarySessionIds,
+    signature_session_id: cleanSignatureIds[0] ?? null,
+    complementary_session_ids: cleanComplementaryIds,
     sort_order: Number(formData.get('sort_order') || 0),
     updated_at: new Date().toISOString(),
   };
 
-  const rowWithSignatures = { ...baseRow, signature_session_ids: signatureSessionIds };
+  const rowWithSignatures = { ...baseRow, signature_session_ids: cleanSignatureIds };
   const rowWithMobility = {
     ...rowWithSignatures,
-    mobility_session_ids: mobilitySessionIds,
+    mobility_session_ids: cleanMobilityIds,
     session_section_order: sessionSectionOrder,
   };
   let { error } = await db.from('programs').upsert(rowWithMobility);
@@ -71,7 +84,7 @@ export async function upsertProgram(formData: FormData): Promise<UpsertProgramRe
 
   if (error?.message.includes('signature_session_ids')) {
     ({ error } = await db.from('programs').upsert(baseRow));
-    if (!error && signatureSessionIds.length > 1) {
+    if (!error && cleanSignatureIds.length > 1) {
       const t = createTranslator(await getLocale());
       return { ok: false, error: t('programs.migrationError') };
     }
@@ -106,7 +119,7 @@ export async function upsertProgram(formData: FormData): Promise<UpsertProgramRe
 
   if (error) return { ok: false, error: error.message };
 
-  const selectedVideoIds = [...signatureSessionIds, ...mobilitySessionIds, ...complementarySessionIds];
+  const selectedVideoIds = [...cleanSignatureIds, ...cleanMobilityIds, ...cleanComplementaryIds];
   if (selectedVideoIds.length > 0) {
     const { error: videoError } = await db
       .from('videos')
