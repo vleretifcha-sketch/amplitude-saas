@@ -441,9 +441,9 @@ export const en: Dictionary = {
     resendApiKey: 'Resend API key',
     newsletterFromEmail: 'Sender email',
     newsletterFromName: 'Display name (optional)',
-    newsletterFooterLogo: 'Footer logo (campaigns)',
+    newsletterFooterLogo: 'Campaign email logo',
     newsletterFooterLogoHint:
-      'Shown at the bottom of each campaign email. Defaults to the Amplitude back-office logo. You can replace it with another image.',
+      'Shown in the header and footer of each campaign. Default: Amplitude logo from the back-office (public URL).',
     emailKeyHint:
       'Create a key at resend.com/api-keys. The sender address must use a domain verified in Resend (resend.com/domains). Without a verified domain, no emails are sent.',
     emailConnected: 'Ready to send',

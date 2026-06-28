@@ -65,9 +65,27 @@ export function getDefaultNewsletterFooterLogoUrl(): string {
   return `${getPublicAppUrl()}/amplitude-logo.jpg`;
 }
 
+/** Ensures campaign emails always reference a public absolute logo URL. */
+export function resolveNewsletterLogoUrl(raw: string | null | undefined): string {
+  const trimmed = raw?.trim();
+  const fallback = getDefaultNewsletterFooterLogoUrl();
+
+  if (!trimmed) return fallback;
+
+  try {
+    const absolute = trimmed.startsWith('/') ? `${getPublicAppUrl()}${trimmed}` : trimmed;
+    const parsed = new URL(absolute);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return fallback;
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return fallback;
+    return absolute;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getNewsletterFooterLogoUrl(): Promise<string> {
   const custom = await getSettingValue(NEWSLETTER_FOOTER_LOGO_URL_SETTING);
-  return custom || getDefaultNewsletterFooterLogoUrl();
+  return resolveNewsletterLogoUrl(custom);
 }
 
 export async function getSubscriptionNotifyEmail(): Promise<string | null> {
@@ -272,6 +290,17 @@ function isSafeImageUrl(url: string): boolean {
   }
 }
 
+function renderCampaignLogo(logoUrl: string): string {
+  const safeUrl = escapeHtml(logoUrl);
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+  <tr>
+    <td align="center" style="padding:0 0 24px">
+      <img src="${safeUrl}" alt="Amplitude" width="140" height="auto" style="display:block;max-width:140px;width:140px;height:auto;border:0;outline:none;text-decoration:none" />
+    </td>
+  </tr>
+</table>`;
+}
+
 export function buildCampaignHtml(
   body: string,
   preview?: string | null,
@@ -283,21 +312,40 @@ export function buildCampaignHtml(
     .replace(/>/g, '&gt;')
     .replace(/\n/g, '<br>');
   const preheader = preview?.trim()
-    ? `<span style="display:none;max-height:0;overflow:hidden">${escapeHtml(preview.trim())}</span>`
+    ? `<span style="display:none;max-height:0;overflow:hidden;mso-hide:all">${escapeHtml(preview.trim())}</span>`
     : '';
-  const logoUrl = footerLogoUrl?.trim();
-  const footer =
-    logoUrl && isSafeImageUrl(logoUrl)
-      ? `<div style="margin-top:32px;padding-top:24px;border-top:1px solid #e5e5e5;text-align:center">
-           <img src="${escapeHtml(logoUrl)}" alt="Amplitude" width="140" style="max-width:140px;width:140px;height:auto;display:inline-block;border:0" />
-         </div>`
-      : '';
-  return `${preheader}<div style="font-family:sans-serif;line-height:1.6;color:#111;max-width:600px">${escaped}${footer}</div>`;
+  const logoUrl = resolveNewsletterLogoUrl(footerLogoUrl);
+  const header = isSafeImageUrl(logoUrl) ? renderCampaignLogo(logoUrl) : '';
+  const footer = header
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:32px">
+  <tr>
+    <td style="padding-top:24px;border-top:1px solid #e5e5e5;text-align:center">
+      <img src="${escapeHtml(logoUrl)}" alt="Amplitude" width="100" height="auto" style="display:inline-block;max-width:100px;width:100px;height:auto;border:0;opacity:0.85" />
+    </td>
+  </tr>
+</table>`
+    : '';
+
+  return `${preheader}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff">
+  <tr>
+    <td align="center" style="padding:24px 16px">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:600px;width:100%">
+        <tr>
+          <td style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#111111">
+            ${header}
+            <div style="font-size:16px">${escaped}</div>
+            ${footer}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
 }
 
 /** @deprecated Use buildCampaignHtml for newsletter sends. */
 export function textToHtml(body: string, preview?: string | null): string {
-  return buildCampaignHtml(body, preview);
+  return buildCampaignHtml(body, preview, getDefaultNewsletterFooterLogoUrl());
 }
 
 type OutboundEmail = {

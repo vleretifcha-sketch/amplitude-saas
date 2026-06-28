@@ -16,6 +16,7 @@ import {
   NEWSLETTER_FOOTER_LOGO_URL_SETTING,
   RESEND_API_KEY_SETTING,
   SUBSCRIPTION_NOTIFY_EMAIL_SETTING,
+  resolveNewsletterLogoUrl,
   sendTestEmail as sendTestEmailViaResend,
 } from '@/lib/email/server';
 import { parseEmailList } from '@/lib/email/subscription-notify-shared';
@@ -135,7 +136,7 @@ export async function saveEmailSettings(formData: FormData): Promise<SettingsAct
     });
     rows.push({
       key: NEWSLETTER_FOOTER_LOGO_URL_SETTING,
-      value: footerLogoUrl || getDefaultNewsletterFooterLogoUrl(),
+      value: resolveNewsletterLogoUrl(footerLogoUrl || getDefaultNewsletterFooterLogoUrl()),
       updated_at: new Date().toISOString(),
     });
 

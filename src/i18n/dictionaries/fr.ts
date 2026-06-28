@@ -441,9 +441,9 @@ export const fr = {
     resendApiKey: 'Clé API Resend',
     newsletterFromEmail: 'Email d’expédition',
     newsletterFromName: 'Nom affiché (optionnel)',
-    newsletterFooterLogo: 'Logo pied de page (campagnes)',
+    newsletterFooterLogo: 'Logo des campagnes email',
     newsletterFooterLogoHint:
-      'Affiché en bas de chaque email de campagne. Par défaut : logo Amplitude du back-office. Vous pouvez le remplacer par une autre image.',
+      'Affiché en en-tête et en pied de page de chaque campagne. Par défaut : logo Amplitude du back-office (URL publique).',
     emailKeyHint:
       'Créez une clé sur resend.com/api-keys. L’adresse d’expédition doit utiliser un domaine vérifié dans Resend (resend.com/domains). Sans domaine vérifié, aucun email ne part.',
     emailConnected: 'Prêt à envoyer',
