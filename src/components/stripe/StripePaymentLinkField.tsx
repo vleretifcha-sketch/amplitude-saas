@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import { ensureStripePaymentLink } from '@/actions/stripe-products';
+import { ensureStripePaymentLink, saveStripeProductPaymentLink } from '@/actions/stripe-products';
 import { Button } from '@/components/ui/Button';
+import { Field, Input } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
 
 export function StripePaymentLinkField({
@@ -17,9 +18,11 @@ export function StripePaymentLinkField({
 }) {
   const { t } = useLocale();
   const router = useRouter();
-  const [url, setUrl] = useState(initialUrl);
+  const [url, setUrl] = useState(initialUrl ?? '');
+  const [draftUrl, setDraftUrl] = useState(initialUrl ?? '');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function resolveUrl(): Promise<string | null> {
     if (url) return url;
@@ -27,6 +30,7 @@ export function StripePaymentLinkField({
     try {
       const next = await ensureStripePaymentLink(productId);
       setUrl(next);
+      setDraftUrl(next);
       router.refresh();
       return next;
     } catch (e) {
@@ -37,8 +41,24 @@ export function StripePaymentLinkField({
     }
   }
 
+  async function onSaveUrl() {
+    const trimmed = draftUrl.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    try {
+      await saveStripeProductPaymentLink(productId, trimmed);
+      setUrl(trimmed);
+      toast.success(t('toast.saved'));
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function onCopy() {
-    const link = url ?? (await resolveUrl());
+    const link = url || draftUrl || (await resolveUrl());
     if (!link) return;
 
     try {
@@ -51,39 +71,31 @@ export function StripePaymentLinkField({
     }
   }
 
-  if (!url) {
-    return (
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted">{t('stripe.paymentLinkLabel')}</p>
-        <Button type="button" variant="secondary" size="sm" disabled={loading} onClick={() => resolveUrl()}>
-          {loading ? t('stripe.paymentLinkGenerating') : t('stripe.paymentLinkGenerate')}
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-xs font-medium uppercase tracking-widest text-muted">{t('stripe.paymentLinkLabel')}</p>
-      <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-border-subtle bg-surface-elevated px-3 py-2">
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="min-w-0 flex-1 truncate font-mono text-xs text-secondary hover:text-foreground hover:underline"
-        >
-          {url}
-        </a>
-        <button
-          type="button"
-          onClick={onCopy}
-          disabled={loading}
-          className="shrink-0 rounded-lg p-1.5 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-          aria-label={t('stripe.copyPaymentLink')}
-          title={t('stripe.copyPaymentLink')}
-        >
-          {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
-        </button>
+      <Field>
+        <Input
+          value={draftUrl}
+          onChange={(e) => setDraftUrl(e.target.value)}
+          placeholder="https://buy.stripe.com/…"
+          className="font-mono text-xs"
+        />
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="secondary" size="sm" disabled={saving || !draftUrl.trim()} onClick={onSaveUrl}>
+          {saving ? t('common.saving') : t('stripe.paymentLinkSave')}
+        </Button>
+        {!url ? (
+          <Button type="button" variant="secondary" size="sm" disabled={loading} onClick={() => resolveUrl()}>
+            {loading ? t('stripe.paymentLinkGenerating') : t('stripe.paymentLinkGenerate')}
+          </Button>
+        ) : (
+          <Button type="button" variant="ghost" size="sm" onClick={onCopy}>
+            {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
+            <span className="ml-2">{t('stripe.copyPaymentLink')}</span>
+          </Button>
+        )}
       </div>
       <p className="text-xs text-muted">{t('stripe.paymentLinkHint')}</p>
     </div>

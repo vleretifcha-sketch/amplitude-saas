@@ -1,20 +1,39 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { decryptSetting } from '@/lib/settings-crypto';
 import { getPublicAppUrl } from '@/lib/app-url';
+import {
+  DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL,
+  mergeEmailLists,
+} from '@/lib/email/subscription-notify-shared';
 
 export const RESEND_API_KEY_SETTING = 'resend_api_key';
 export const NEWSLETTER_FROM_EMAIL_SETTING = 'newsletter_from_email';
 export const NEWSLETTER_FROM_NAME_SETTING = 'newsletter_from_name';
 export const NEWSLETTER_FOOTER_LOGO_URL_SETTING = 'newsletter_footer_logo_url';
+export const SUBSCRIPTION_NOTIFY_EMAIL_SETTING = 'subscription_notify_email';
 
 const RESEND_API_URL = 'https://api.resend.com';
+
+export type ResendDomain = {
+  name: string;
+  status: string;
+};
 
 export type EmailConnectionStatus = {
   connected: boolean;
   fromEmail: string | null;
   fromName: string | null;
+  notifyEmail: string | null;
+  notifyRecipients: string[];
   hasApiKey: boolean;
+  keyDecryptOk: boolean;
   footerLogoUrl: string;
+  domainName: string | null;
+  domainStatus: string | null;
+  domainVerified: boolean;
+  resendDomains: ResendDomain[];
+  issue: 'none' | 'missing_key' | 'decrypt_failed' | 'missing_from' | 'domain_not_verified' | 'resend_api_error';
+  issueDetail: string | null;
 };
 
 async function getSettingValue(key: string): Promise<string | null> {
@@ -51,36 +70,183 @@ export async function getNewsletterFooterLogoUrl(): Promise<string> {
   return custom || getDefaultNewsletterFooterLogoUrl();
 }
 
-export async function getEmailConnectionStatus(): Promise<EmailConnectionStatus> {
-  const [apiKey, fromEmail, fromName, footerLogoUrl] = await Promise.all([
-    getResendApiKey(),
-    getNewsletterFromEmail(),
-    getNewsletterFromName(),
-    getNewsletterFooterLogoUrl(),
-  ]);
-
-  return {
-    connected: Boolean(apiKey && fromEmail),
-    fromEmail,
-    fromName,
-    hasApiKey: Boolean(apiKey),
-    footerLogoUrl,
-  };
+export async function getSubscriptionNotifyEmail(): Promise<string | null> {
+  return getSettingValue(SUBSCRIPTION_NOTIFY_EMAIL_SETTING);
 }
 
-export async function isEmailConnected(): Promise<boolean> {
-  const apiKey = await getResendApiKey();
-  if (!apiKey) return false;
+export async function resolveSubscriptionNotifyRecipients(): Promise<string[]> {
+  const [fromSettings, fromEnv, fromAdmins] = await Promise.all([
+    getSubscriptionNotifyEmail(),
+    Promise.resolve(process.env.SUBSCRIPTION_NOTIFY_EMAIL ?? null),
+    Promise.resolve(process.env.ADMIN_EMAILS ?? null),
+  ]);
 
+  const recipients = mergeEmailLists(fromSettings, fromEnv, fromAdmins);
+  if (recipients.length > 0) return recipients;
+  return [DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL];
+}
+
+export async function sendResendMessage(params: {
+  to: string[];
+  subject: string;
+  text: string;
+  html: string;
+  replyTo?: string | null;
+}): Promise<{ ok: true; id?: string } | { ok: false; error: string }> {
+  const recipients = [...new Set(params.to.map((email) => email.trim().toLowerCase()))].filter(Boolean);
+  if (recipients.length === 0) {
+    return { ok: false, error: 'No notification recipients configured.' };
+  }
+
+  const status = await getEmailConnectionStatus();
+  if (!status.keyDecryptOk || !status.fromEmail) {
+    return { ok: false, error: 'Resend is not configured.' };
+  }
+  if (!status.domainVerified) {
+    return {
+      ok: false,
+      error: status.issueDetail ?? 'Sender domain is not verified in Resend.',
+    };
+  }
+
+  const apiKey = await getResendApiKey();
+  if (!apiKey) {
+    return { ok: false, error: 'Resend API key cannot be decrypted. Re-save it in Settings.' };
+  }
+
+  const sender = await getNewsletterSender();
+  const response = await fetch(`${RESEND_API_URL}/emails`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: sender.from,
+      to: recipients,
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+      ...(params.replyTo ? { reply_to: params.replyTo } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: parseResendError(await response.text()) };
+  }
+
+  const payload = (await response.json()) as { id?: string };
+  return { ok: true, id: payload.id };
+}
+
+async function fetchResendDomains(apiKey: string): Promise<
+  { ok: true; domains: ResendDomain[] } | { ok: false; error: string }
+> {
   try {
     const response = await fetch(`${RESEND_API_URL}/domains`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       cache: 'no-store',
     });
-    return response.ok;
-  } catch {
-    return false;
+
+    if (!response.ok) {
+      return { ok: false, error: parseResendError(await response.text()) };
+    }
+
+    const payload = (await response.json()) as { data?: ResendDomain[] };
+    return { ok: true, domains: payload.data ?? [] };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Impossible de contacter Resend.',
+    };
   }
+}
+
+function domainFromEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const domain = email.split('@')[1]?.trim().toLowerCase();
+  return domain || null;
+}
+
+export async function getEmailConnectionStatus(): Promise<EmailConnectionStatus> {
+  const [encryptedKey, fromEmail, fromName, footerLogoUrl, notifyEmail, notifyRecipients] = await Promise.all([
+    getSettingValue(RESEND_API_KEY_SETTING),
+    getNewsletterFromEmail(),
+    getNewsletterFromName(),
+    getNewsletterFooterLogoUrl(),
+    getSubscriptionNotifyEmail(),
+    resolveSubscriptionNotifyRecipients(),
+  ]);
+
+  const base = {
+    fromEmail,
+    fromName,
+    notifyEmail,
+    notifyRecipients,
+    hasApiKey: Boolean(encryptedKey),
+    keyDecryptOk: false,
+    footerLogoUrl,
+    domainName: domainFromEmail(fromEmail),
+    domainStatus: null as string | null,
+    domainVerified: false,
+    resendDomains: [] as ResendDomain[],
+    issue: 'none' as EmailConnectionStatus['issue'],
+    issueDetail: null as string | null,
+    connected: false,
+  };
+
+  if (!encryptedKey) {
+    return { ...base, issue: 'missing_key' };
+  }
+
+  if (!fromEmail) {
+    return { ...base, issue: 'missing_from' };
+  }
+
+  let apiKey: string | null = null;
+  try {
+    apiKey = await decryptSetting(encryptedKey);
+    base.keyDecryptOk = true;
+  } catch (error) {
+    return {
+      ...base,
+      issue: 'decrypt_failed',
+      issueDetail: error instanceof Error ? error.message : null,
+    };
+  }
+
+  const domainsResult = await fetchResendDomains(apiKey);
+  if (!domainsResult.ok) {
+    return {
+      ...base,
+      issue: 'resend_api_error',
+      issueDetail: domainsResult.error,
+    };
+  }
+
+  const domainName = domainFromEmail(fromEmail);
+  const matched = domainsResult.domains.find((domain) => domain.name === domainName);
+  const domainVerified = matched?.status === 'verified';
+
+  return {
+    ...base,
+    resendDomains: domainsResult.domains,
+    domainName,
+    domainStatus: matched?.status ?? 'not_found',
+    domainVerified,
+    issue: domainVerified ? 'none' : 'domain_not_verified',
+    issueDetail: domainVerified
+      ? null
+      : matched
+        ? `Statut Resend : ${matched.status}`
+        : `Le domaine « ${domainName} » n’est pas ajouté dans Resend.`,
+    connected: domainVerified,
+  };
+}
+
+export async function isEmailConnected(): Promise<boolean> {
+  const status = await getEmailConnectionStatus();
+  return status.connected;
 }
 
 export function formatFromAddress(email: string, name?: string | null): string {
@@ -241,6 +407,60 @@ export async function sendBatchEmails(
   if (emails.length === 0) return { sent: 0, failed: 0, lastError: null };
 
   return sendBatchChunk(apiKey, from, emails);
+}
+
+export async function sendTestEmail(to: string): Promise<{ ok: true; id?: string } | { ok: false; error: string }> {
+  const trimmed = to.trim();
+  if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { ok: false, error: 'Invalid recipient email.' };
+  }
+
+  const status = await getEmailConnectionStatus();
+  if (!status.keyDecryptOk || !status.fromEmail) {
+    return { ok: false, error: 'Resend is not configured.' };
+  }
+  if (!status.domainVerified) {
+    return {
+      ok: false,
+      error:
+        status.issueDetail ??
+        'Sender domain is not verified in Resend. Add and verify the domain at resend.com/domains.',
+    };
+  }
+
+  const apiKey = await getResendApiKey();
+  if (!apiKey) {
+    return { ok: false, error: 'Resend API key cannot be decrypted. Re-save it in Settings.' };
+  }
+
+  const sender = await getNewsletterSender();
+  const footerLogoUrl = await getNewsletterFooterLogoUrl();
+  const subject = 'Test Amplitude — envoi Resend';
+  const body =
+    'Ceci est un email de test depuis le back-office Amplitude.\n\nSi vous le recevez, Resend est correctement configuré.';
+  const html = buildCampaignHtml(body, null, footerLogoUrl);
+
+  const response = await fetch(`${RESEND_API_URL}/emails`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: sender.from,
+      to: [trimmed],
+      subject,
+      html,
+      text: body,
+    }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: parseResendError(await response.text()) };
+  }
+
+  const payload = (await response.json()) as { id?: string };
+  return { ok: true, id: payload.id };
 }
 
 export async function getNewsletterSender(): Promise<{ from: string; fromEmail: string; fromName: string | null }> {

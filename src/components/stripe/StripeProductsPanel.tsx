@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CreatePromoCodeForm } from '@/components/stripe/CreatePromoCodeForm';
 import { CreateStripeProductForm } from '@/components/stripe/CreateStripeProductForm';
+import { LinkStripeProductForm } from '@/components/stripe/LinkStripeProductForm';
 import { StripePaymentLinkField } from '@/components/stripe/StripePaymentLinkField';
 import { StripePromoCodesList } from '@/components/stripe/StripePromoCodesList';
 import { paginate, Pagination } from '@/components/ui/Pagination';
+import { billingTypeLabel, formatStripeProductPrice } from '@/lib/stripe/product';
 import { useLocale } from '@/i18n/client';
 import type { StripeProductRow } from '@/lib/types';
 
@@ -21,6 +23,18 @@ export function StripeProductsPanel({ products }: { products: StripeProductRow[]
   const [page, setPage] = useState(1);
   const [archiving, setArchiving] = useState<string | null>(null);
   const paged = paginate(products, page);
+
+  const priceLabels = {
+    monthShort: t('stripe.monthShort'),
+    yearShort: t('stripe.yearShort'),
+    lifetime: t('stripe.billingLifetime'),
+  };
+
+  const billingLabels = {
+    monthly: t('stripe.billingMonthly'),
+    annual: t('stripe.billingAnnual'),
+    lifetime: t('stripe.billingLifetime'),
+  };
 
   async function onArchive(id: string) {
     if (!window.confirm(t('stripe.archiveConfirm'))) return;
@@ -44,7 +58,10 @@ export function StripeProductsPanel({ products }: { products: StripeProductRow[]
           <h2 className="mt-1 text-xl font-semibold">{t('stripe.sectionTitle')}</h2>
           <p className="mt-1 text-sm text-secondary">{t('stripe.sectionDescription')}</p>
         </div>
-        <CreateStripeProductForm onCreated={() => router.refresh()} />
+        <div className="flex flex-wrap gap-2">
+          <LinkStripeProductForm onLinked={() => router.refresh()} />
+          <CreateStripeProductForm onCreated={() => router.refresh()} />
+        </div>
       </div>
 
       {products.length === 0 ? (
@@ -55,19 +72,26 @@ export function StripeProductsPanel({ products }: { products: StripeProductRow[]
             <Card key={product.id} className="space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-lg font-medium">{product.name}</h3>
                     <Badge tone={product.active ? 'success' : 'muted'}>
                       {product.active ? t('stripe.statusActive') : t('stripe.statusArchived')}
+                    </Badge>
+                    <Badge tone="muted">
+                      {billingTypeLabel(product.billing_type ?? 'monthly', billingLabels)}
                     </Badge>
                   </div>
                   {product.description ? (
                     <p className="mt-1 text-sm text-secondary">{product.description}</p>
                   ) : null}
                   <p className="mt-2 text-sm text-secondary">
-                    {product.monthly_price != null ? `${product.monthly_price} €/${t('stripe.monthShort')}` : '—'}
+                    {formatStripeProductPrice(product, priceLabels)}
                     {' · '}
                     {t('stripe.subscribers', { count: product.activeSubscribers })}
+                  </p>
+                  <p className="mt-1 font-mono text-xs text-muted">
+                    {product.stripe_product_id}
+                    {product.stripe_price_id ? ` · ${product.stripe_price_id}` : ''}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

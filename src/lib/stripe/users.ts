@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import type { createAdminClient } from '@/lib/supabase/admin';
 import type { SubscriptionStatus } from '@/lib/types';
+import { planForBillingType, resolveCheckoutPriceId } from '@/lib/stripe/product';
 
 type Db = ReturnType<typeof createAdminClient>;
 
@@ -34,9 +35,13 @@ export async function attachStripeSubscription(
 
   if (!product) throw new Error('Stripe product not found.');
 
-  const priceId =
-    params.plan === 'annual' ? product.stripe_annual_price_id : product.stripe_monthly_price_id;
-  if (!priceId) throw new Error(`No ${params.plan} price configured for this offer.`);
+  if (product.billing_type === 'lifetime') {
+    throw new Error('Lifetime offers cannot be attached as a recurring subscription. Use manual premium access.');
+  }
+
+  const plan = params.plan ?? planForBillingType(product.billing_type ?? 'monthly');
+  const priceId = resolveCheckoutPriceId(product);
+  if (!priceId) throw new Error(`No checkout price configured for this offer.`);
 
   const customer = await stripe.customers.create({
     email: params.email,
@@ -60,7 +65,7 @@ export async function attachStripeSubscription(
     : null;
   const subscriptionStatus = mapStripeSubscriptionStatus(subscription.status);
   const priceMonthly =
-    params.plan === 'monthly'
+    plan === 'monthly'
       ? Number(product.monthly_price ?? 0)
       : Number(product.annual_price ?? 0) / 12;
 
@@ -69,7 +74,7 @@ export async function attachStripeSubscription(
     .update({
       stripe_customer_id: customer.id,
       stripe_subscription_id: subscription.id,
-      subscription_plan: params.plan,
+      subscription_plan: plan,
       subscription_status: subscriptionStatus,
       subscription_expires_at: expiresAt,
       updated_at: new Date().toISOString(),

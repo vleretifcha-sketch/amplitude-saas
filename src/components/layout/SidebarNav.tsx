@@ -12,11 +12,18 @@ export type SidebarNavLink = {
   icon: LucideIcon;
 };
 
+export type SidebarNavSubLink = {
+  href: string;
+  label: string;
+  /** When pathname starts with this prefix, do not mark this item active via prefix matching. */
+  excludePrefix?: string;
+};
+
 export type SidebarNavGroup = {
   id: string;
   label: string;
   icon: LucideIcon;
-  items: Omit<SidebarNavLink, 'icon'>[];
+  items: SidebarNavSubLink[];
 };
 
 function linkClass(active: boolean) {
@@ -40,8 +47,14 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function groupIsActive(pathname: string, items: Omit<SidebarNavLink, 'icon'>[]) {
-  return items.some((item) => isActive(pathname, item.href));
+function isSubNavActive(pathname: string, item: SidebarNavSubLink) {
+  if (pathname === item.href) return true;
+  if (item.excludePrefix && pathname.startsWith(item.excludePrefix)) return false;
+  return pathname.startsWith(`${item.href}/`);
+}
+
+function groupIsActive(pathname: string, items: SidebarNavSubLink[]) {
+  return items.some((item) => isSubNavActive(pathname, item));
 }
 
 export function SidebarNavLinkItem({ href, label, icon: Icon }: SidebarNavLink) {
@@ -91,7 +104,7 @@ export function SidebarNavGroupSection({ group }: { group: SidebarNavGroup }) {
               key={item.href}
               href={item.href}
               prefetch
-              className={subLinkClass(isActive(pathname, item.href))}
+              className={subLinkClass(isSubNavActive(pathname, item))}
             >
               {item.label}
             </Link>

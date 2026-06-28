@@ -1,17 +1,13 @@
 import {
-  formatFromAddress,
-  getNewsletterFromEmail,
-  getNewsletterFromName,
-  getResendApiKey,
+  resolveSubscriptionNotifyRecipients,
+  sendResendMessage,
 } from '@/lib/email/server';
+import { buildSubscriptionNotifyContent } from '@/lib/email/subscription-notify-shared';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const RESEND_API_URL = 'https://api.resend.com/emails';
-const DEFAULT_NOTIFY_EMAIL = 'contact@amplitudeapp.fr';
-
-function notifyEmail(): string {
-  return process.env.SUBSCRIPTION_NOTIFY_EMAIL?.trim() || DEFAULT_NOTIFY_EMAIL;
-}
+export type SubscriptionNotifyResult =
+  | { ok: true; id?: string; recipients: string[] }
+  | { ok: false; error: string; recipients: string[] };
 
 export async function sendSubscriptionAdminNotification(params: {
   userId: string;
@@ -19,15 +15,10 @@ export async function sendSubscriptionAdminNotification(params: {
   userName?: string | null;
   planLabel?: string | null;
   amountLabel?: string | null;
-}): Promise<void> {
-  try {
-    const apiKey = await getResendApiKey();
-    const fromEmail = await getNewsletterFromEmail();
-    if (!apiKey || !fromEmail) {
-      console.warn('Subscription notify skipped: Resend not configured.');
-      return;
-    }
+}): Promise<SubscriptionNotifyResult> {
+  const recipients = await resolveSubscriptionNotifyRecipients();
 
+  try {
     let email = params.userEmail?.trim() || '';
     let name = params.userName?.trim() || '';
 
@@ -42,41 +33,40 @@ export async function sendSubscriptionAdminNotification(params: {
       name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || email;
     }
 
-    const fromName = await getNewsletterFromName();
-    const from = formatFromAddress(fromEmail, fromName);
-    const subject = `Nouvel abonnement Amplitude — ${name || email || params.userId}`;
-    const lines: string[] = [
-      'Un nouvel abonnement vient d\'être activé.',
-      '',
-      `Utilisateur : ${name || '—'}`,
-      `Email : ${email || '—'}`,
-      `ID : ${params.userId}`,
-    ];
-    if (params.planLabel) lines.push(`Formule : ${params.planLabel}`);
-    if (params.amountLabel) lines.push(`Montant : ${params.amountLabel}`);
-
-    const text = lines.join('\n');
-    const html = lines.map((line) => `<p>${line}</p>`).join('');
-
-    const response = await fetch(RESEND_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: [notifyEmail()],
-        subject,
-        html,
-        text,
-      }),
+    const { subject, text, html } = buildSubscriptionNotifyContent({
+      ...params,
+      userEmail: email,
+      userName: name,
     });
 
-    if (!response.ok) {
-      console.error('Subscription notify failed:', await response.text());
+    const result = await sendResendMessage({
+      to: recipients,
+      subject,
+      text,
+      html,
+      replyTo: email || null,
+    });
+
+    if (!result.ok) {
+      console.error('[subscription-notify] send failed:', result.error, '→', recipients.join(', '));
+      return { ok: false, error: result.error, recipients };
     }
+
+    console.info('[subscription-notify] sent', result.id ?? '(no id)', '→', recipients.join(', '));
+    return { ok: true, id: result.id, recipients };
   } catch (error) {
-    console.error('Subscription notify error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[subscription-notify] error:', message);
+    return { ok: false, error: message, recipients };
   }
+}
+
+export async function sendSubscriptionNotifyTest(): Promise<SubscriptionNotifyResult> {
+  return sendSubscriptionAdminNotification({
+    userId: '00000000-0000-0000-0000-000000000000',
+    userEmail: 'test@example.com',
+    userName: 'Test notification',
+    planLabel: 'Amplitude Pro (test)',
+    amountLabel: '498,00 EUR/an',
+  });
 }

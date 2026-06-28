@@ -7,8 +7,16 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { DeleteUserButton } from '@/components/users/DeleteUserButton';
 import { SuspendUserButton } from '@/components/users/SuspendUserButton';
 import { SubscriptionForm } from '@/components/users/SubscriptionForm';
+import { SubscriptionProductLabel } from '@/components/users/SubscriptionProductLabel';
 import { UserProfileForm } from '@/components/users/UserProfileForm';
 import { createTranslator, getDateLocale, getLocale, translateStatus } from '@/i18n';
+import { billingTypeLabel } from '@/lib/stripe/product';
+import {
+  pickActiveSubscription,
+  resolveSubscriptionProduct,
+  resolveUserListRow,
+} from '@/lib/stripe/subscription-display';
+import { fetchStripeProductsCatalog } from '@/lib/queries';
 import type { Profile, Subscription, SubscriptionStatus } from '@/lib/types';
 
 const subTone: Record<SubscriptionStatus, 'success' | 'accent' | 'warning' | 'muted'> = {
@@ -29,7 +37,7 @@ export default async function UserDetailPage({
   const { id } = await params;
   const db = createAdminClient();
 
-  const [{ data: profile }, { data: subs }, { count: sessions }, { data: recentSessions }] =
+  const [{ data: profile }, { data: subs }, { count: sessions }, { data: recentSessions }, stripeProducts] =
     await Promise.all([
       db.from('profiles').select('*').eq('id', id).single(),
       db.from('subscriptions').select('*').eq('user_id', id).order('started_at', { ascending: false }),
@@ -40,12 +48,33 @@ export default async function UserDetailPage({
         .eq('user_id', id)
         .order('completed_at', { ascending: false })
         .limit(5),
+      fetchStripeProductsCatalog(),
     ]);
 
   if (!profile) notFound();
 
   const p = profile as Profile;
   const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email;
+  const subscriptionRows = (subs ?? []) as Subscription[];
+  const userRow = resolveUserListRow(p, subscriptionRows, stripeProducts);
+  const activeSub = pickActiveSubscription(subscriptionRows);
+
+  const resolveHistoryProductLabel = (sub: Subscription) => {
+    const info = resolveSubscriptionProduct(sub, stripeProducts, p);
+    if (info.stripeProductName) {
+      const billing =
+        info.billingType != null
+          ? billingTypeLabel(info.billingType, {
+              monthly: t('users.planMonthly'),
+              annual: t('users.planAnnual'),
+              lifetime: t('stripe.billingLifetime'),
+            })
+          : null;
+      return billing ? `${info.stripeProductName} · ${billing}` : info.stripeProductName;
+    }
+    if (info.isManual) return t('users.manualPremium');
+    return sub.product_id;
+  };
 
   const { data: activeProgram } = p.current_program_id
     ? await db.from('programs').select('title').eq('id', p.current_program_id).maybeSingle()
@@ -101,6 +130,12 @@ export default async function UserDetailPage({
               </div>
             ) : null}
             <div className="flex justify-between gap-4">
+              <dt className="text-secondary">{t('users.colProduct')}</dt>
+              <dd className="text-right">
+                <SubscriptionProductLabel user={userRow} />
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
               <dt className="text-secondary">{t('users.stripeCustomer')}</dt>
               <dd className="truncate text-right font-mono text-xs">{p.stripe_customer_id ?? t('common.dash')}</dd>
             </div>
@@ -133,13 +168,14 @@ export default async function UserDetailPage({
                 <SuspendUserButton userId={p.id} />
               </div>
             ) : null}
-            {(subs as Subscription[] | null)?.length ? (
+            {(subscriptionRows.length > 0 || activeSub) ? (
               <div className="mt-6 space-y-2 border-t border-border-subtle pt-4 text-sm">
                 <p className="text-secondary">{t('users.subscriptionHistory')}</p>
-                {(subs as Subscription[]).map((s) => (
+                {subscriptionRows.map((s) => (
                   <div key={s.id} className="rounded-2xl bg-surface-muted p-3">
+                    <p className="font-medium">{resolveHistoryProductLabel(s)}</p>
                     <p>
-                      {s.product_id} — {translateStatus(t, s.status)} ({s.platform ?? 'n/a'})
+                      {translateStatus(t, s.status)} ({s.platform ?? 'n/a'})
                     </p>
                     <p className="text-muted">
                       {s.started_at

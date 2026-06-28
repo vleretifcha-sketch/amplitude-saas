@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { createStripeProduct } from '@/actions/stripe-products';
 import { Button } from '@/components/ui/Button';
-import { Field, Input, Label, Textarea } from '@/components/ui/Input';
+import { Field, Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { useLocale } from '@/i18n/client';
 
@@ -36,24 +36,30 @@ export function CreateStripeProductForm({ onCreated }: { onCreated?: () => void 
   }
 
   return (
-    <Card className="space-y-4">
+    <Card className="w-full max-w-2xl space-y-4">
       <h3 className="text-lg font-medium">{t('stripe.createProduct')}</h3>
       <form action={onSubmit} className="grid gap-4">
         <Field>
           <Label htmlFor="name">{t('stripe.formName')}</Label>
           <Input id="name" name="name" placeholder="Amplitude Premium" required />
         </Field>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field>
+            <Label htmlFor="billing_type">{t('stripe.formBillingType')}</Label>
+            <Select id="billing_type" name="billing_type" defaultValue="annual">
+              <option value="monthly">{t('stripe.billingMonthly')}</option>
+              <option value="annual">{t('stripe.billingAnnual')}</option>
+              <option value="lifetime">{t('stripe.billingLifetime')}</option>
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="price">{t('stripe.formPrice')}</Label>
+            <Input id="price" name="price" type="number" step="0.01" min="0.01" placeholder="149" required />
+          </Field>
+        </div>
         <Field>
-          <Label htmlFor="monthly_price">{t('stripe.formMonthly')}</Label>
-          <Input
-            id="monthly_price"
-            name="monthly_price"
-            type="number"
-            step="0.01"
-            min="0.01"
-            placeholder="39"
-            required
-          />
+          <Label htmlFor="sort_order">{t('stripe.formSortOrder')}</Label>
+          <Input id="sort_order" name="sort_order" type="number" defaultValue={0} />
         </Field>
         <Field>
           <Label htmlFor="description">{t('stripe.formDescription')}</Label>

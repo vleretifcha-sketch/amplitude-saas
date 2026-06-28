@@ -3,6 +3,7 @@ import {
   getEmailConnectionStatus,
   type EmailConnectionStatus,
 } from '@/lib/email/server';
+import { DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL } from '@/lib/email/subscription-notify-shared';
 import { maskSecretKey } from '@/lib/settings-crypto';
 import { getStripeSecretKey, isStripeConnected } from '@/lib/stripe/server';
 
@@ -38,8 +39,17 @@ export async function getEmailSettingsStatus(): Promise<EmailConnectionStatus> {
       connected: false,
       fromEmail: null,
       fromName: null,
+      notifyEmail: null,
+      notifyRecipients: [DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL],
       hasApiKey: false,
+      keyDecryptOk: false,
       footerLogoUrl: getDefaultNewsletterFooterLogoUrl(),
+      domainName: null,
+      domainStatus: null,
+      domainVerified: false,
+      resendDomains: [],
+      issue: 'missing_key',
+      issueDetail: null,
     };
   }
 }

@@ -118,6 +118,9 @@ export type Subscription = {
   currency: string;
   revenuecat_customer_id: string | null;
   store_transaction_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_price_id: string | null;
+  stripe_product_id: string | null;
   started_at: string;
   expires_at: string | null;
   cancelled_at: string | null;
@@ -186,18 +189,23 @@ export type SubscriptionChartRow = {
   status: SubscriptionRecordStatus;
 };
 
+export type StripeBillingType = 'monthly' | 'annual' | 'lifetime';
+
 export type StripeProduct = {
   id: string;
   stripe_product_id: string;
+  stripe_price_id: string | null;
   stripe_monthly_price_id: string | null;
   stripe_annual_price_id: string | null;
   name: string;
   description: string | null;
+  billing_type: StripeBillingType;
   monthly_price: number | null;
   annual_price: number | null;
   trial_days: number | null;
   stripe_payment_link_id: string | null;
   stripe_payment_link_url: string | null;
+  sort_order: number;
   active: boolean;
   created_at: string;
   updated_at: string;

@@ -1,6 +1,10 @@
 import { cache } from 'react';
 import { createAdminClient } from '@/lib/supabase/admin';
-import type { Exercise, Program, Profile } from '@/lib/types';
+import {
+  resolveUserListRow,
+  type UserListRow,
+} from '@/lib/stripe/subscription-display';
+import type { Exercise, Program, Profile, StripeProduct, Subscription } from '@/lib/types';
 
 export const getProgramsList = cache(async (): Promise<Pick<Program, 'id' | 'title'>[]> => {
   const db = createAdminClient();
@@ -38,6 +42,47 @@ export async function fetchProfilesForList(limit = 500): Promise<Profile[]> {
 
   if (fallback.error) throw new Error(fallback.error.message);
   return (fallback.data ?? []) as Profile[];
+}
+
+export async function fetchStripeProductsCatalog(): Promise<StripeProduct[]> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from('stripe_products')
+    .select('*')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as StripeProduct[];
+}
+
+export async function fetchUsersWithSubscriptions(limit = 500): Promise<UserListRow[]> {
+  const db = createAdminClient();
+  const [profiles, products] = await Promise.all([
+    fetchProfilesForList(limit),
+    fetchStripeProductsCatalog(),
+  ]);
+
+  if (profiles.length === 0) return [];
+
+  const userIds = profiles.map((profile) => profile.id);
+  const { data: subs, error } = await db
+    .from('subscriptions')
+    .select('*')
+    .in('user_id', userIds);
+
+  if (error) throw new Error(error.message);
+
+  const subsByUser = new Map<string, Subscription[]>();
+  for (const sub of (subs ?? []) as Subscription[]) {
+    const list = subsByUser.get(sub.user_id) ?? [];
+    list.push(sub);
+    subsByUser.set(sub.user_id, list);
+  }
+
+  return profiles.map((profile) =>
+    resolveUserListRow(profile, subsByUser.get(profile.id) ?? [], products)
+  );
 }
 
 const EXERCISE_LIST_COLUMNS =

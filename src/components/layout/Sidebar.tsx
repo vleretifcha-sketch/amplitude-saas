@@ -31,6 +31,16 @@ export function Sidebar() {
     ],
   };
 
+  const usersGroup = {
+    id: 'users',
+    label: t('nav.users'),
+    icon: Users,
+    items: [
+      { href: '/users', label: t('nav.usersList'), excludePrefix: '/users/subscriptions' },
+      { href: '/users/subscriptions', label: t('nav.subscriptions') },
+    ],
+  };
+
   const mailingGroup = {
     id: 'mailing',
     label: t('nav.mailing'),
@@ -58,7 +68,7 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-1">
         <SidebarNavLinkItem href="/" label={t('nav.overview')} icon={LayoutDashboard} />
         <SidebarNavGroupSection group={contentGroup} />
-        <SidebarNavLinkItem href="/users" label={t('nav.users')} icon={Users} />
+        <SidebarNavGroupSection group={usersGroup} />
         <SidebarNavGroupSection group={mailingGroup} />
         <SidebarNavLinkItem href="/community" label={t('nav.community')} icon={MessageSquare} />
         <SidebarNavLinkItem href="/settings" label={t('nav.settings')} icon={Settings} />

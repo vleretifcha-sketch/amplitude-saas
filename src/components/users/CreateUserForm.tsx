@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input, Label, Select } from '@/components/ui/Input';
 import { useLocale } from '@/i18n/client';
 import type { StripeProduct } from '@/lib/types';
+import { planForBillingType } from '@/lib/stripe/product';
 
 function generatePassword() {
   const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$';
@@ -20,11 +21,22 @@ export function CreateUserForm({ stripeProducts = [] }: { stripeProducts?: Strip
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState(() => generatePassword());
   const [accessType, setAccessType] = useState<'free' | 'premium'>('free');
+  const [selectedProductId, setSelectedProductId] = useState('');
 
   const activeProducts = useMemo(
     () => stripeProducts.filter((product) => product.active),
     [stripeProducts]
   );
+
+  const attachableProducts = useMemo(
+    () => activeProducts.filter((product) => product.billing_type !== 'lifetime'),
+    [activeProducts]
+  );
+
+  const selectedProduct = attachableProducts.find((product) => product.id === selectedProductId);
+  const subscriptionPlan = selectedProduct
+    ? planForBillingType(selectedProduct.billing_type ?? 'monthly')
+    : 'monthly';
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
@@ -90,20 +102,25 @@ export function CreateUserForm({ stripeProducts = [] }: { stripeProducts?: Strip
               <option value="premium">{t('users.accessPremium')}</option>
             </Select>
           </Field>
-          {accessType === 'premium' && activeProducts.length > 0 ? (
+          {accessType === 'premium' && attachableProducts.length > 0 ? (
             <>
               <Field>
                 <Label htmlFor="stripe_product_id">{t('users.stripeOffer')}</Label>
-                <Select id="stripe_product_id" name="stripe_product_id" defaultValue="">
+                <Select
+                  id="stripe_product_id"
+                  name="stripe_product_id"
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                >
                   <option value="">{t('users.manualPremium')}</option>
-                  {activeProducts.map((product) => (
+                  {attachableProducts.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <input type="hidden" name="subscription_plan" value="monthly" />
+              <input type="hidden" name="subscription_plan" value={subscriptionPlan} />
             </>
           ) : accessType === 'premium' ? (
             <>

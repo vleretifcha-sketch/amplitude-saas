@@ -9,13 +9,17 @@ import {
   STRIPE_SECRET_SETTING_KEY,
 } from '@/lib/stripe/server';
 import {
-  getResendApiKey,
   getDefaultNewsletterFooterLogoUrl,
+  getResendApiKey,
   NEWSLETTER_FROM_EMAIL_SETTING,
   NEWSLETTER_FROM_NAME_SETTING,
   NEWSLETTER_FOOTER_LOGO_URL_SETTING,
   RESEND_API_KEY_SETTING,
+  SUBSCRIPTION_NOTIFY_EMAIL_SETTING,
+  sendTestEmail as sendTestEmailViaResend,
 } from '@/lib/email/server';
+import { parseEmailList } from '@/lib/email/subscription-notify-shared';
+import { sendSubscriptionNotifyTest } from '@/lib/email/subscription-notify';
 import { ONBOARDING_IMAGE_KEYS } from '@/lib/onboarding/server';
 import { resolveImageUrlFromForm } from '@/lib/upload-image';
 
@@ -91,9 +95,17 @@ export async function saveEmailSettings(formData: FormData): Promise<SettingsAct
   const rawKey = String(formData.get('resend_api_key') || '').trim();
   const fromEmail = String(formData.get('newsletter_from_email') || '').trim();
   const fromName = String(formData.get('newsletter_from_name') || '').trim();
+  const notifyEmail = String(formData.get('subscription_notify_email') || '').trim();
 
   if (!fromEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
     return { ok: false, error: t('settings.emailInvalidAddress') };
+  }
+
+  if (notifyEmail) {
+    const parsed = parseEmailList(notifyEmail);
+    if (parsed.length === 0) {
+      return { ok: false, error: t('settings.emailInvalidNotifyAddress') };
+    }
   }
 
   try {
@@ -107,6 +119,11 @@ export async function saveEmailSettings(formData: FormData): Promise<SettingsAct
       {
         key: NEWSLETTER_FROM_NAME_SETTING,
         value: fromName,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        key: SUBSCRIPTION_NOTIFY_EMAIL_SETTING,
+        value: notifyEmail,
         updated_at: new Date().toISOString(),
       },
     ];
@@ -162,7 +179,12 @@ export async function disconnectEmail(): Promise<SettingsActionResult> {
     const { error } = await db
       .from('app_settings')
       .delete()
-      .in('key', [RESEND_API_KEY_SETTING, NEWSLETTER_FROM_EMAIL_SETTING, NEWSLETTER_FROM_NAME_SETTING]);
+      .in('key', [
+        RESEND_API_KEY_SETTING,
+        NEWSLETTER_FROM_EMAIL_SETTING,
+        NEWSLETTER_FROM_NAME_SETTING,
+        SUBSCRIPTION_NOTIFY_EMAIL_SETTING,
+      ]);
 
     if (error) return { ok: false, error: error.message };
 
@@ -171,6 +193,41 @@ export async function disconnectEmail(): Promise<SettingsActionResult> {
     return { ok: true };
   } catch (error) {
     return settingsError(error, t('common.error'));
+  }
+}
+
+export async function sendEmailTest(formData: FormData): Promise<SettingsActionResult> {
+  const t = createTranslator(await getLocale());
+  const to = String(formData.get('test_email') || '').trim();
+
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    return { ok: false, error: t('settings.emailInvalidAddress') };
+  }
+
+  try {
+    const result = await sendTestEmailViaResend(to);
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  } catch (error) {
+    return settingsError(error, t('settings.emailTestFailed'));
+  }
+}
+
+export async function sendSubscriptionNotifyTestAction(): Promise<
+  SettingsActionResult & { recipients?: string[] }
+> {
+  const t = createTranslator(await getLocale());
+
+  try {
+    const result = await sendSubscriptionNotifyTest();
+    if (!result.ok) {
+      return { ok: false, error: result.error, recipients: result.recipients };
+    }
+    return { ok: true, recipients: result.recipients };
+  } catch (error) {
+    return settingsError(error, t('settings.subscriptionNotifyTestFailed'));
   }
 }
 

@@ -12,6 +12,7 @@ export default async function NewUserPage() {
     .from('stripe_products')
     .select('*')
     .eq('active', true)
+    .order('sort_order', { ascending: true })
     .order('name');
 
   return (
