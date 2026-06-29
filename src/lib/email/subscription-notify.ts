@@ -3,9 +3,14 @@ import {
   resolveSubscriptionNotifyRecipients,
   sendResendMessage,
 } from '@/lib/email/server';
+import { isOvhSmtpConfigured, sendViaOvhSmtp } from '@/lib/email/ovh-smtp';
 import { DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL, buildSubscriptionNotifyContent } from '@/lib/email/subscription-notify-shared';
 import { persistSubscriptionNotifyLog } from '@/lib/email/subscription-notify-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+
+function recipientsNeedOvhSmtp(recipients: string[]): boolean {
+  return recipients.some((email) => email.endsWith('@amplitudeapp.fr'));
+}
 
 export type SubscriptionNotifyResult =
   | { ok: true; id?: string; recipients: string[] }
@@ -42,13 +47,33 @@ export async function sendSubscriptionAdminNotification(params: {
       userName: name,
     });
 
+    const replyTo = email || DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL;
+
+    if (recipientsNeedOvhSmtp(recipients) && isOvhSmtpConfigured()) {
+      const ovhResult = await sendViaOvhSmtp({ to: recipients, subject, text, html, replyTo });
+      if (ovhResult.ok) {
+        console.info('[subscription-notify] sent via OVH SMTP →', recipients.join(', '));
+        await persistSubscriptionNotifyLog({ at, ok: true, recipients, source: 'saas' });
+        return { ok: true, recipients };
+      }
+      console.error('[subscription-notify] OVH SMTP failed:', ovhResult.error);
+      await persistSubscriptionNotifyLog({
+        at,
+        ok: false,
+        recipients,
+        error: ovhResult.error,
+        source: 'saas',
+      });
+      return { ok: false, error: ovhResult.error, recipients };
+    }
+
     const sender = await getSubscriptionNotifySender();
     const result = await sendResendMessage({
       to: recipients,
       subject,
       text,
       html,
-      replyTo: email || DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL,
+      replyTo,
       from: sender.from,
     });
 

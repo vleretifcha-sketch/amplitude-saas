@@ -453,7 +453,7 @@ export const en: Dictionary = {
     emailDisconnected: 'Email configuration removed',
     subscriptionNotifyEmail: 'Subscription notification email',
     subscriptionNotifyEmailHint:
-      'Recipient for subscription alerts (contact@amplitudeapp.fr). Emails are sent from notifications@amplitudeapp.fr to avoid OVH blocking.',
+      'Alert recipient (contact@amplitudeapp.fr). Delivered via OVH SMTP — set OVH_SMTP_USER and OVH_SMTP_PASSWORD on Vercel.',
     subscriptionNotifyRecipients: 'Current recipients: {{recipients}}',
     subscriptionNotifyTestTitle: 'Test subscription alert',
     subscriptionNotifyTestHint:

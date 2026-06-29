@@ -453,7 +453,7 @@ export const fr = {
     emailDisconnected: 'Configuration email supprimée',
     subscriptionNotifyEmail: 'Email de notification abonnements',
     subscriptionNotifyEmailHint:
-      'Destinataire des alertes abonnement (contact@amplitudeapp.fr). Les emails partent depuis notifications@amplitudeapp.fr pour éviter un blocage OVH.',
+      'Destinataire des alertes (contact@amplitudeapp.fr). Livraison via SMTP OVH — configurez OVH_SMTP_USER et OVH_SMTP_PASSWORD sur Vercel.',
     subscriptionNotifyRecipients: 'Destinataires actuels : {{recipients}}',
     subscriptionNotifyTestTitle: 'Tester l’alerte abonnement',
     subscriptionNotifyTestHint:
