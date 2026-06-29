@@ -453,7 +453,7 @@ export const fr = {
     emailDisconnected: 'Configuration email supprimée',
     subscriptionNotifyEmail: 'Email de notification abonnements',
     subscriptionNotifyEmailHint:
-      'Alerte reçue à chaque nouvel abonnement Stripe. Par défaut : contact@amplitudeapp.fr.',
+      'Destinataire des alertes abonnement (contact@amplitudeapp.fr). Les emails partent depuis notifications@amplitudeapp.fr pour éviter un blocage OVH.',
     subscriptionNotifyRecipients: 'Destinataires actuels : {{recipients}}',
     subscriptionNotifyTestTitle: 'Tester l’alerte abonnement',
     subscriptionNotifyTestHint:

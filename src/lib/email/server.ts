@@ -3,6 +3,7 @@ import { decryptSetting } from '@/lib/settings-crypto';
 import { getPublicAppUrl } from '@/lib/app-url';
 import {
   DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL,
+  DEFAULT_SUBSCRIPTION_NOTIFY_FROM_EMAIL,
   mergeEmailLists,
   type SubscriptionNotifyLog,
 } from '@/lib/email/subscription-notify-shared';
@@ -106,12 +107,28 @@ export async function resolveSubscriptionNotifyRecipients(): Promise<string[]> {
   return [DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL];
 }
 
+export async function getSubscriptionNotifySender(): Promise<{
+  from: string;
+  fromEmail: string;
+  fromName: string | null;
+}> {
+  const fromName = await getNewsletterFromName();
+  const fromEmail =
+    process.env.SUBSCRIPTION_NOTIFY_FROM_EMAIL?.trim() || DEFAULT_SUBSCRIPTION_NOTIFY_FROM_EMAIL;
+  return {
+    from: formatFromAddress(fromEmail, fromName),
+    fromEmail,
+    fromName,
+  };
+}
+
 export async function sendResendMessage(params: {
   to: string[];
   subject: string;
   text: string;
   html: string;
   replyTo?: string | null;
+  from?: string;
 }): Promise<{ ok: true; id?: string } | { ok: false; error: string }> {
   const recipients = [...new Set(params.to.map((email) => email.trim().toLowerCase()))].filter(Boolean);
   if (recipients.length === 0) {
@@ -134,7 +151,7 @@ export async function sendResendMessage(params: {
     return { ok: false, error: 'Resend API key cannot be decrypted. Re-save it in Settings.' };
   }
 
-  const sender = await getNewsletterSender();
+  const sender = params.from ? { from: params.from } : await getNewsletterSender();
   const response = await fetch(`${RESEND_API_URL}/emails`, {
     method: 'POST',
     headers: {

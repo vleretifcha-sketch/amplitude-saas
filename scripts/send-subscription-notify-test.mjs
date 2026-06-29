@@ -1,6 +1,6 @@
 /**
- * Envoie une alerte abonnement test via Resend (même logique que le webhook).
- * Usage: node scripts/send-subscription-notify-test.mjs
+ * Test: envoi depuis notifications@ vers contact@ (évite le conflit même adresse).
+ * Usage: node scripts/send-subscription-notify-test.mjs [from-email]
  */
 import { createClient } from '@supabase/supabase-js';
 import { createDecipheriv, createHash } from 'crypto';
@@ -34,6 +34,8 @@ function parseEmailList(raw) {
   return [...new Set(raw.split(EMAIL_SPLIT).map((e) => e.trim().toLowerCase()).filter(Boolean))];
 }
 
+const fromOverride = process.argv[2]?.trim();
+
 const db = createClient(url, serviceKey);
 const { data: rows } = await db
   .from('app_settings')
@@ -42,17 +44,15 @@ const { data: rows } = await db
 
 const map = new Map((rows ?? []).map((row) => [row.key, row.value]));
 const apiKey = decrypt(map.get('resend_api_key'), encKey);
-const fromEmail = map.get('newsletter_from_email');
-const fromName = map.get('newsletter_from_name');
+const fromEmail = fromOverride || 'notifications@amplitudeapp.fr';
+const fromName = map.get('newsletter_from_name') || 'Amplitude';
 const recipients = parseEmailList(map.get('subscription_notify_email'));
-if (recipients.length === 0) {
-  recipients.push('contact@amplitudeapp.fr');
-}
+if (recipients.length === 0) recipients.push('contact@amplitudeapp.fr');
 
-const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
-const subject = 'TEST — Nouvel abonnement Amplitude — Amplitude Pro';
+const from = `${fromName} <${fromEmail}>`;
+const subject = 'TEST 2 — Nouvel abonnement Amplitude — Amplitude Pro';
 const text =
-  'Ceci est un test de notification abonnement.\n\nSi vous recevez cet email, les alertes Stripe fonctionnent.';
+  `Test depuis ${fromEmail} vers ${recipients.join(', ')}.\n\nSi vous recevez cet email, les alertes Stripe fonctionnent.`;
 
 const response = await fetch('https://api.resend.com/emails', {
   method: 'POST',
@@ -63,6 +63,7 @@ const response = await fetch('https://api.resend.com/emails', {
   body: JSON.stringify({
     from,
     to: recipients,
+    reply_to: 'contact@amplitudeapp.fr',
     subject,
     text,
     html: text.replace(/\n/g, '<br>'),
@@ -76,4 +77,4 @@ if (!response.ok) {
 }
 
 const payload = JSON.parse(body);
-console.log('OK: test sent to', recipients.length, 'recipient(s), Resend id:', payload.id ?? '(none)');
+console.log('OK: from', fromEmail, '→', recipients.join(', '), '| Resend id:', payload.id ?? '(none)');

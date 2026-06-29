@@ -1,8 +1,9 @@
 import {
+  getSubscriptionNotifySender,
   resolveSubscriptionNotifyRecipients,
   sendResendMessage,
 } from '@/lib/email/server';
-import { buildSubscriptionNotifyContent } from '@/lib/email/subscription-notify-shared';
+import { DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL, buildSubscriptionNotifyContent } from '@/lib/email/subscription-notify-shared';
 import { persistSubscriptionNotifyLog } from '@/lib/email/subscription-notify-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -41,12 +42,14 @@ export async function sendSubscriptionAdminNotification(params: {
       userName: name,
     });
 
+    const sender = await getSubscriptionNotifySender();
     const result = await sendResendMessage({
       to: recipients,
       subject,
       text,
       html,
-      replyTo: email || null,
+      replyTo: email || DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL,
+      from: sender.from,
     });
 
     if (!result.ok) {

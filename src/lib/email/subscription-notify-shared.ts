@@ -1,4 +1,6 @@
 export const DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL = 'contact@amplitudeapp.fr';
+/** Expéditeur dédié — évite d'envoyer contact@ → contact@ via Resend (bloqué par OVH). */
+export const DEFAULT_SUBSCRIPTION_NOTIFY_FROM_EMAIL = 'notifications@amplitudeapp.fr';
 export const SUBSCRIPTION_NOTIFY_LAST_LOG_SETTING = 'subscription_notify_last_log';
 
 export type SubscriptionNotifyLog = {

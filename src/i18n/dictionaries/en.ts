@@ -453,7 +453,7 @@ export const en: Dictionary = {
     emailDisconnected: 'Email configuration removed',
     subscriptionNotifyEmail: 'Subscription notification email',
     subscriptionNotifyEmailHint:
-      'Alert sent on each new Stripe subscription. Default: contact@amplitudeapp.fr.',
+      'Recipient for subscription alerts (contact@amplitudeapp.fr). Emails are sent from notifications@amplitudeapp.fr to avoid OVH blocking.',
     subscriptionNotifyRecipients: 'Current recipients: {{recipients}}',
     subscriptionNotifyTestTitle: 'Test subscription alert',
     subscriptionNotifyTestHint:
