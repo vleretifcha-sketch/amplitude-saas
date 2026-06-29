@@ -1,4 +1,14 @@
 export const DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL = 'contact@amplitudeapp.fr';
+export const SUBSCRIPTION_NOTIFY_LAST_LOG_SETTING = 'subscription_notify_last_log';
+
+export type SubscriptionNotifyLog = {
+  at: string;
+  ok: boolean;
+  recipients: string[];
+  error?: string | null;
+  resendId?: string | null;
+  source: 'saas' | 'webhook';
+};
 
 const EMAIL_LIST_SPLIT = /[,;\n]\s*/;
 

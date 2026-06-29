@@ -12,6 +12,7 @@ import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { IMAGE_CROP_ASPECT } from '@/lib/crop-image';
 import { useLocale } from '@/i18n/client';
 import type { EmailConnectionStatus } from '@/lib/email/server';
+import { DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL } from '@/lib/email/subscription-notify-shared';
 
 function issueMessage(t: (key: string, vars?: Record<string, string | number>) => string, status: EmailConnectionStatus): string | null {
   switch (status.issue) {
@@ -194,8 +195,8 @@ export function EmailSettingsForm({ status }: { status: EmailConnectionStatus })
             name="subscription_notify_email"
             type="text"
             autoComplete="email"
-            placeholder="votre@email.com"
-            defaultValue={status.notifyEmail ?? ''}
+            placeholder="contact@amplitudeapp.fr"
+            defaultValue={status.notifyEmail ?? DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL}
           />
           <p className="mt-1.5 text-xs text-muted">{t('settings.subscriptionNotifyEmailHint')}</p>
           {status.notifyRecipients.length > 0 ? (

@@ -453,7 +453,7 @@ export const en: Dictionary = {
     emailDisconnected: 'Email configuration removed',
     subscriptionNotifyEmail: 'Subscription notification email',
     subscriptionNotifyEmailHint:
-      'Your direct email (Gmail, etc.). Multiple addresses allowed, comma-separated. Do not rely on forwarding from contact@amplitudeapp.fr — it does not always deliver Resend alerts.',
+      'Alert sent on each new Stripe subscription. Default: contact@amplitudeapp.fr.',
     subscriptionNotifyRecipients: 'Current recipients: {{recipients}}',
     subscriptionNotifyTestTitle: 'Test subscription alert',
     subscriptionNotifyTestHint:

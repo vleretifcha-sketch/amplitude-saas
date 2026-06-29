@@ -41,6 +41,7 @@ export async function getEmailSettingsStatus(): Promise<EmailConnectionStatus> {
       fromName: null,
       notifyEmail: null,
       notifyRecipients: [DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL],
+      notifyLastLog: null,
       hasApiKey: false,
       keyDecryptOk: false,
       footerLogoUrl: getDefaultNewsletterFooterLogoUrl(),

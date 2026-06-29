@@ -4,7 +4,9 @@ import { getPublicAppUrl } from '@/lib/app-url';
 import {
   DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL,
   mergeEmailLists,
+  type SubscriptionNotifyLog,
 } from '@/lib/email/subscription-notify-shared';
+import { getSubscriptionNotifyLastLog } from '@/lib/email/subscription-notify-log';
 
 export const RESEND_API_KEY_SETTING = 'resend_api_key';
 export const NEWSLETTER_FROM_EMAIL_SETTING = 'newsletter_from_email';
@@ -25,6 +27,7 @@ export type EmailConnectionStatus = {
   fromName: string | null;
   notifyEmail: string | null;
   notifyRecipients: string[];
+  notifyLastLog: SubscriptionNotifyLog | null;
   hasApiKey: boolean;
   keyDecryptOk: boolean;
   footerLogoUrl: string;
@@ -93,13 +96,12 @@ export async function getSubscriptionNotifyEmail(): Promise<string | null> {
 }
 
 export async function resolveSubscriptionNotifyRecipients(): Promise<string[]> {
-  const [fromSettings, fromEnv, fromAdmins] = await Promise.all([
+  const [fromSettings, fromEnv] = await Promise.all([
     getSubscriptionNotifyEmail(),
     Promise.resolve(process.env.SUBSCRIPTION_NOTIFY_EMAIL ?? null),
-    Promise.resolve(process.env.ADMIN_EMAILS ?? null),
   ]);
 
-  const recipients = mergeEmailLists(fromSettings, fromEnv, fromAdmins);
+  const recipients = mergeEmailLists(fromSettings, fromEnv);
   if (recipients.length > 0) return recipients;
   return [DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL];
 }
@@ -187,13 +189,15 @@ function domainFromEmail(email: string | null | undefined): string | null {
 }
 
 export async function getEmailConnectionStatus(): Promise<EmailConnectionStatus> {
-  const [encryptedKey, fromEmail, fromName, footerLogoUrl, notifyEmail, notifyRecipients] = await Promise.all([
+  const [encryptedKey, fromEmail, fromName, footerLogoUrl, notifyEmail, notifyRecipients, notifyLastLog] =
+    await Promise.all([
     getSettingValue(RESEND_API_KEY_SETTING),
     getNewsletterFromEmail(),
     getNewsletterFromName(),
     getNewsletterFooterLogoUrl(),
     getSubscriptionNotifyEmail(),
     resolveSubscriptionNotifyRecipients(),
+    getSubscriptionNotifyLastLog(),
   ]);
 
   const base = {
@@ -201,6 +205,7 @@ export async function getEmailConnectionStatus(): Promise<EmailConnectionStatus>
     fromName,
     notifyEmail,
     notifyRecipients,
+    notifyLastLog,
     hasApiKey: Boolean(encryptedKey),
     keyDecryptOk: false,
     footerLogoUrl,

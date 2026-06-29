@@ -19,7 +19,7 @@ import {
   resolveNewsletterLogoUrl,
   sendTestEmail as sendTestEmailViaResend,
 } from '@/lib/email/server';
-import { parseEmailList } from '@/lib/email/subscription-notify-shared';
+import { DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL, parseEmailList } from '@/lib/email/subscription-notify-shared';
 import { sendSubscriptionNotifyTest } from '@/lib/email/subscription-notify';
 import { ONBOARDING_IMAGE_KEYS } from '@/lib/onboarding/server';
 import { resolveImageUrlFromForm } from '@/lib/upload-image';
@@ -124,7 +124,7 @@ export async function saveEmailSettings(formData: FormData): Promise<SettingsAct
       },
       {
         key: SUBSCRIPTION_NOTIFY_EMAIL_SETTING,
-        value: notifyEmail,
+        value: notifyEmail || DEFAULT_SUBSCRIPTION_NOTIFY_EMAIL,
         updated_at: new Date().toISOString(),
       },
     ];
@@ -226,6 +226,7 @@ export async function sendSubscriptionNotifyTestAction(): Promise<
     if (!result.ok) {
       return { ok: false, error: result.error, recipients: result.recipients };
     }
+    revalidatePath('/settings');
     return { ok: true, recipients: result.recipients };
   } catch (error) {
     return settingsError(error, t('settings.subscriptionNotifyTestFailed'));

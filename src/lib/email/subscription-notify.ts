@@ -3,6 +3,7 @@ import {
   sendResendMessage,
 } from '@/lib/email/server';
 import { buildSubscriptionNotifyContent } from '@/lib/email/subscription-notify-shared';
+import { persistSubscriptionNotifyLog } from '@/lib/email/subscription-notify-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type SubscriptionNotifyResult =
@@ -17,6 +18,7 @@ export async function sendSubscriptionAdminNotification(params: {
   amountLabel?: string | null;
 }): Promise<SubscriptionNotifyResult> {
   const recipients = await resolveSubscriptionNotifyRecipients();
+  const at = new Date().toISOString();
 
   try {
     let email = params.userEmail?.trim() || '';
@@ -49,14 +51,35 @@ export async function sendSubscriptionAdminNotification(params: {
 
     if (!result.ok) {
       console.error('[subscription-notify] send failed:', result.error, '→', recipients.join(', '));
+      await persistSubscriptionNotifyLog({
+        at,
+        ok: false,
+        recipients,
+        error: result.error,
+        source: 'saas',
+      });
       return { ok: false, error: result.error, recipients };
     }
 
     console.info('[subscription-notify] sent', result.id ?? '(no id)', '→', recipients.join(', '));
+    await persistSubscriptionNotifyLog({
+      at,
+      ok: true,
+      recipients,
+      resendId: result.id ?? null,
+      source: 'saas',
+    });
     return { ok: true, id: result.id, recipients };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[subscription-notify] error:', message);
+    await persistSubscriptionNotifyLog({
+      at,
+      ok: false,
+      recipients,
+      error: message,
+      source: 'saas',
+    });
     return { ok: false, error: message, recipients };
   }
 }
