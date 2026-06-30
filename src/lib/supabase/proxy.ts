@@ -3,7 +3,7 @@ import { isAdminEmail } from '@/lib/auth';
 import { getPublicSupabaseEnv } from '@/lib/env';
 import { createServerClient } from '@supabase/ssr';
 
-const PUBLIC_PREFIXES = ['/login', '/auth/callback', '/api/stripe/webhook'];
+const PUBLIC_PREFIXES = ['/login', '/auth/callback', '/api/stripe/webhook', '/api/internal/subscription-notify'];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
