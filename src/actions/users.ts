@@ -1,5 +1,6 @@
 'use server';
 
+import { after } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/lib/stripe/server';
@@ -8,6 +9,21 @@ import { sendSubscriptionAdminNotification } from '@/lib/email/subscription-noti
 import { formatStripeProductPrice } from '@/lib/stripe/product';
 import { createTranslator, getLocale } from '@/i18n';
 import type { SubscriptionStatus } from '@/lib/types';
+
+export type CreateUserResult =
+  | { ok: true; userId: string }
+  | { ok: false; error: string };
+
+function mapCreateUserAuthError(message: string, t: ReturnType<typeof createTranslator>): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('already been registered') || lower.includes('already exists')) {
+    return t('users.emailExists');
+  }
+  if (lower.includes('password')) {
+    return t('users.passwordInvalid');
+  }
+  return message;
+}
 
 async function syncSubscriptionRecords(
   db: ReturnType<typeof createAdminClient>,
@@ -202,7 +218,8 @@ async function notifyPremiumUserCreated(
   }
 }
 
-export async function createUser(formData: FormData): Promise<string> {
+export async function createUser(formData: FormData): Promise<CreateUserResult> {
+  const t = createTranslator(await getLocale());
   const db = createAdminClient();
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const password = String(formData.get('password') || '');
@@ -218,7 +235,7 @@ export async function createUser(formData: FormData): Promise<string> {
   const expiresAt = expiresRaw ? new Date(expiresRaw).toISOString() : null;
 
   if (!email || password.length < 8) {
-    throw new Error('Email and password (min 8 characters) are required.');
+    return { ok: false, error: t('users.passwordInvalid') };
   }
 
   const { data, error } = await db.auth.admin.createUser({
@@ -231,37 +248,50 @@ export async function createUser(formData: FormData): Promise<string> {
     },
   });
 
-  if (error) throw new Error(error.message);
-  if (!data.user) throw new Error('User creation failed.');
+  if (error) return { ok: false, error: mapCreateUserAuthError(error.message, t) };
+  if (!data.user) return { ok: false, error: t('users.createFailed') };
 
   const userId = data.user.id;
 
-  if (accessType === 'premium' && stripeProductId) {
-    let stripe = null;
-    try {
-      stripe = await getStripeClient();
-    } catch {
-      /* Customer Stripe optionnel pour un accès premium admin */
-    }
-    await grantAdminPremiumAccess(db, stripe, {
-      userId,
-      email,
-      firstName,
-      lastName,
-      stripeProductId,
-      plan: subscriptionPlan,
-      subscriptionStatus: subscriptionStatus !== 'none' ? subscriptionStatus : 'active',
-      expiresAt,
-    });
-  } else if (accessType === 'premium') {
-    try {
-      const stripe = await getStripeClient();
-      await createStripeCustomerOnly(db, stripe, { userId, email, firstName, lastName });
-    } catch {
-      /* Stripe optional when no product selected */
-    }
-    if (subscriptionStatus !== 'none') {
-      await db
+  try {
+    if (accessType === 'premium' && stripeProductId) {
+      let stripe = null;
+      try {
+        stripe = await getStripeClient();
+      } catch {
+        /* Customer Stripe optionnel pour un accès premium admin */
+      }
+      await grantAdminPremiumAccess(db, stripe, {
+        userId,
+        email,
+        firstName,
+        lastName,
+        stripeProductId,
+        plan: subscriptionPlan,
+        subscriptionStatus: subscriptionStatus !== 'none' ? subscriptionStatus : 'active',
+        expiresAt,
+      });
+    } else if (accessType === 'premium') {
+      try {
+        const stripe = await getStripeClient();
+        await createStripeCustomerOnly(db, stripe, { userId, email, firstName, lastName });
+      } catch {
+        /* Stripe optional when no product selected */
+      }
+      if (subscriptionStatus !== 'none') {
+        const { error: profileError } = await db
+          .from('profiles')
+          .update({
+            subscription_status: subscriptionStatus,
+            subscription_expires_at: expiresAt,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId);
+        if (profileError) throw new Error(profileError.message);
+        await syncSubscriptionRecords(db, userId, subscriptionStatus, expiresAt);
+      }
+    } else if (subscriptionStatus !== 'none') {
+      const { error: profileError } = await db
         .from('profiles')
         .update({
           subscription_status: subscriptionStatus,
@@ -269,37 +299,33 @@ export async function createUser(formData: FormData): Promise<string> {
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId);
+      if (profileError) throw new Error(profileError.message);
       await syncSubscriptionRecords(db, userId, subscriptionStatus, expiresAt);
     }
-  } else if (subscriptionStatus !== 'none') {
-    await db
-      .from('profiles')
-      .update({
-        subscription_status: subscriptionStatus,
-        subscription_expires_at: expiresAt,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-    await syncSubscriptionRecords(db, userId, subscriptionStatus, expiresAt);
+  } catch (setupError) {
+    const message = setupError instanceof Error ? setupError.message : t('users.createFailed');
+    return { ok: false, error: message };
   }
 
   if (accessType === 'premium') {
-    try {
-      await notifyPremiumUserCreated(db, {
-        userId,
-        email,
-        firstName,
-        lastName,
-        stripeProductId: stripeProductId || undefined,
-      });
-    } catch (error) {
-      console.error('[createUser] subscription notify error:', error);
-    }
+    after(async () => {
+      try {
+        await notifyPremiumUserCreated(db, {
+          userId,
+          email,
+          firstName,
+          lastName,
+          stripeProductId: stripeProductId || undefined,
+        });
+      } catch (notifyError) {
+        console.error('[createUser] subscription notify error:', notifyError);
+      }
+    });
   }
 
   revalidatePath('/users');
   revalidatePath('/');
-  return userId;
+  return { ok: true, userId };
 }
 
 export async function suspendUser(userId: string) {

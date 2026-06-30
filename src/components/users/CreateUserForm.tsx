@@ -39,16 +39,21 @@ export function CreateUserForm({ stripeProducts = [] }: { stripeProducts?: Strip
     : 'monthly';
 
   async function onSubmit(formData: FormData) {
+    if (loading) return;
     setLoading(true);
     try {
       formData.set('password', password);
       formData.set('access_type', accessType);
-      const id = await createUser(formData);
+      const result = await createUser(formData);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(t('toast.created'));
-      router.push(`/users/${id}`);
+      router.push(`/users/${result.userId}`);
       router.refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('common.error'));
+    } catch {
+      toast.error(t('common.error'));
     } finally {
       setLoading(false);
     }

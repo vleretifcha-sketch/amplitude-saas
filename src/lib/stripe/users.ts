@@ -60,7 +60,7 @@ export async function grantAdminPremiumAccess(
       : Number(product.annual_price ?? 0) / 12;
   const now = new Date().toISOString();
 
-  await db
+  const { error: profileError } = await db
     .from('profiles')
     .update({
       subscription_plan: plan,
@@ -70,7 +70,9 @@ export async function grantAdminPremiumAccess(
     })
     .eq('id', params.userId);
 
-  await db.from('subscriptions').upsert(
+  if (profileError) throw new Error(profileError.message);
+
+  const { error: subError } = await db.from('subscriptions').upsert(
     {
       user_id: params.userId,
       product_id: product.stripe_product_id,
@@ -86,6 +88,8 @@ export async function grantAdminPremiumAccess(
     },
     { onConflict: 'user_id,product_id' }
   );
+
+  if (subError) throw new Error(subError.message);
 }
 
 export async function attachStripeSubscription(
