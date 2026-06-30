@@ -4,6 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/lib/stripe/server';
 import { attachStripeSubscription, createStripeCustomerOnly } from '@/lib/stripe/users';
+import { sendSubscriptionAdminNotification } from '@/lib/email/subscription-notify';
+import { formatStripeProductPrice } from '@/lib/stripe/product';
+import { createTranslator, getLocale } from '@/i18n';
 import type { SubscriptionStatus } from '@/lib/types';
 
 async function syncSubscriptionRecords(
@@ -154,6 +157,51 @@ export async function updateUserProfile(formData: FormData) {
   revalidatePath(`/users/${userId}`);
 }
 
+async function notifyPremiumUserCreated(
+  db: ReturnType<typeof createAdminClient>,
+  params: {
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    stripeProductId?: string;
+  }
+) {
+  const t = createTranslator(await getLocale());
+  const name = [params.firstName, params.lastName].filter(Boolean).join(' ') || params.email;
+  let planLabel = t('users.notifyManualPlan');
+  let amountLabel: string | null = null;
+
+  if (params.stripeProductId) {
+    const { data: product } = await db
+      .from('stripe_products')
+      .select('name, billing_type, monthly_price, annual_price')
+      .eq('id', params.stripeProductId)
+      .maybeSingle();
+
+    if (product) {
+      planLabel = `${product.name} (${t('users.notifyAdminCreated')})`;
+      amountLabel = formatStripeProductPrice(product, {
+        monthShort: t('stripe.monthShort'),
+        yearShort: t('stripe.yearShort'),
+        lifetime: t('stripe.billingLifetime'),
+      });
+    }
+  }
+
+  const result = await sendSubscriptionAdminNotification({
+    userId: params.userId,
+    userEmail: params.email,
+    userName: name,
+    planLabel,
+    amountLabel,
+  });
+
+  if (!result.ok) {
+    console.error('[createUser] subscription notify failed:', result.error);
+  }
+}
+
 export async function createUser(formData: FormData): Promise<string> {
   const db = createAdminClient();
   const email = String(formData.get('email') || '').trim().toLowerCase();
@@ -226,6 +274,16 @@ export async function createUser(formData: FormData): Promise<string> {
       })
       .eq('id', userId);
     await syncSubscriptionRecords(db, userId, subscriptionStatus, expiresAt);
+  }
+
+  if (accessType === 'premium') {
+    await notifyPremiumUserCreated(db, {
+      userId,
+      email,
+      firstName,
+      lastName,
+      stripeProductId: stripeProductId || undefined,
+    });
   }
 
   revalidatePath('/users');
