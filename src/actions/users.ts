@@ -8,6 +8,7 @@ import { createStripeCustomerOnly, grantAdminPremiumAccess } from '@/lib/stripe/
 import { sendSubscriptionAdminNotification } from '@/lib/email/subscription-notify';
 import { formatStripeProductPrice } from '@/lib/stripe/product';
 import { createTranslator, getLocale } from '@/i18n';
+import { requireAdmin } from '@/lib/server-auth';
 import type { SubscriptionStatus } from '@/lib/types';
 
 export type CreateUserResult =
@@ -79,6 +80,7 @@ async function syncSubscriptionRecords(
 }
 
 export async function updateUserSubscription(formData: FormData) {
+  await requireAdmin();
   const db = createAdminClient();
   const userId = String(formData.get('user_id'));
   const status = String(formData.get('subscription_status')) as SubscriptionStatus;
@@ -104,6 +106,7 @@ export async function updateUserSubscription(formData: FormData) {
 }
 
 export async function revokeUserSubscription(userId: string) {
+  await requireAdmin();
   const db = createAdminClient();
   const now = new Date().toISOString();
 
@@ -149,6 +152,7 @@ export async function revokeUserSubscription(userId: string) {
 }
 
 export async function updateUserProfile(formData: FormData) {
+  await requireAdmin();
   const db = createAdminClient();
   const userId = String(formData.get('user_id'));
   const firstName = String(formData.get('first_name') || '').trim();
@@ -219,6 +223,7 @@ async function notifyPremiumUserCreated(
 }
 
 export async function createUser(formData: FormData): Promise<CreateUserResult> {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
   const db = createAdminClient();
   const email = String(formData.get('email') || '').trim().toLowerCase();
@@ -329,6 +334,7 @@ export async function createUser(formData: FormData): Promise<CreateUserResult> 
 }
 
 export async function suspendUser(userId: string) {
+  await requireAdmin();
   const db = createAdminClient();
   const { data: profile } = await db
     .from('profiles')
@@ -349,6 +355,7 @@ export async function suspendUser(userId: string) {
 }
 
 export async function deleteUser(userId: string) {
+  await requireAdmin();
   const db = createAdminClient();
   const { error } = await db.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);

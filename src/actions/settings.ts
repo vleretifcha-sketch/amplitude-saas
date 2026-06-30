@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { encryptSetting } from '@/lib/settings-crypto';
+import { requireAdmin } from '@/lib/server-auth';
 import { createTranslator, getLocale } from '@/i18n';
 import {
   getStripeSecretKey,
@@ -40,6 +41,7 @@ function settingsError(error: unknown, fallback: string): SettingsActionResult {
 }
 
 export async function saveStripeSecretKey(formData: FormData): Promise<SettingsActionResult> {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
   const rawKey = String(formData.get('stripe_secret_key') || '').trim();
 
@@ -76,6 +78,7 @@ export async function saveStripeSecretKey(formData: FormData): Promise<SettingsA
 }
 
 export async function disconnectStripe(): Promise<SettingsActionResult> {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
 
   try {
@@ -92,6 +95,7 @@ export async function disconnectStripe(): Promise<SettingsActionResult> {
 }
 
 export async function saveEmailSettings(formData: FormData): Promise<SettingsActionResult> {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
   const rawKey = String(formData.get('resend_api_key') || '').trim();
   const fromEmail = String(formData.get('newsletter_from_email') || '').trim();
@@ -173,6 +177,7 @@ export async function saveEmailSettings(formData: FormData): Promise<SettingsAct
 }
 
 export async function disconnectEmail(): Promise<SettingsActionResult> {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
 
   try {
@@ -198,6 +203,7 @@ export async function disconnectEmail(): Promise<SettingsActionResult> {
 }
 
 export async function sendEmailTest(formData: FormData): Promise<SettingsActionResult> {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
   const to = String(formData.get('test_email') || '').trim();
 
@@ -219,6 +225,7 @@ export async function sendEmailTest(formData: FormData): Promise<SettingsActionR
 export async function sendSubscriptionNotifyTestAction(): Promise<
   SettingsActionResult & { recipients?: string[] }
 > {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
 
   try {
@@ -237,6 +244,7 @@ export async function saveOnboardingImage(
   step: 1 | 2 | 3,
   formData: FormData
 ): Promise<SettingsActionResult> {
+  await requireAdmin();
   const t = createTranslator(await getLocale());
   const key = ONBOARDING_IMAGE_KEYS[step - 1];
 
