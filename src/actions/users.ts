@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/lib/stripe/server';
-import { attachStripeSubscription, createStripeCustomerOnly } from '@/lib/stripe/users';
+import { createStripeCustomerOnly, grantAdminPremiumAccess } from '@/lib/stripe/users';
 import { sendSubscriptionAdminNotification } from '@/lib/email/subscription-notify';
 import { formatStripeProductPrice } from '@/lib/stripe/product';
 import { createTranslator, getLocale } from '@/i18n';
@@ -237,14 +237,21 @@ export async function createUser(formData: FormData): Promise<string> {
   const userId = data.user.id;
 
   if (accessType === 'premium' && stripeProductId) {
-    const stripe = await getStripeClient();
-    await attachStripeSubscription(db, stripe, {
+    let stripe = null;
+    try {
+      stripe = await getStripeClient();
+    } catch {
+      /* Customer Stripe optionnel pour un accès premium admin */
+    }
+    await grantAdminPremiumAccess(db, stripe, {
       userId,
       email,
       firstName,
       lastName,
       stripeProductId,
       plan: subscriptionPlan,
+      subscriptionStatus: subscriptionStatus !== 'none' ? subscriptionStatus : 'active',
+      expiresAt,
     });
   } else if (accessType === 'premium') {
     try {
@@ -277,13 +284,17 @@ export async function createUser(formData: FormData): Promise<string> {
   }
 
   if (accessType === 'premium') {
-    await notifyPremiumUserCreated(db, {
-      userId,
-      email,
-      firstName,
-      lastName,
-      stripeProductId: stripeProductId || undefined,
-    });
+    try {
+      await notifyPremiumUserCreated(db, {
+        userId,
+        email,
+        firstName,
+        lastName,
+        stripeProductId: stripeProductId || undefined,
+      });
+    } catch (error) {
+      console.error('[createUser] subscription notify error:', error);
+    }
   }
 
   revalidatePath('/users');

@@ -14,6 +14,80 @@ export function mapStripeSubscriptionStatus(
   return 'none';
 }
 
+/** Accès premium accordé par l'admin — sans créer d'abonnement Stripe facturé. */
+export async function grantAdminPremiumAccess(
+  db: Db,
+  stripe: Stripe | null,
+  params: {
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    stripeProductId: string;
+    plan: 'monthly' | 'annual';
+    subscriptionStatus?: SubscriptionStatus;
+    expiresAt?: string | null;
+  }
+) {
+  const { data: product } = await db
+    .from('stripe_products')
+    .select('*')
+    .eq('id', params.stripeProductId)
+    .eq('active', true)
+    .single();
+
+  if (!product) throw new Error('Stripe product not found.');
+
+  if (stripe) {
+    try {
+      await createStripeCustomerOnly(db, stripe, {
+        userId: params.userId,
+        email: params.email,
+        firstName: params.firstName,
+        lastName: params.lastName,
+      });
+    } catch {
+      /* Stripe customer optional for admin-granted access */
+    }
+  }
+
+  const status = params.subscriptionStatus ?? 'active';
+  const plan = params.plan ?? planForBillingType(product.billing_type ?? 'monthly');
+  const priceId = resolveCheckoutPriceId(product);
+  const priceMonthly =
+    plan === 'monthly'
+      ? Number(product.monthly_price ?? 0)
+      : Number(product.annual_price ?? 0) / 12;
+  const now = new Date().toISOString();
+
+  await db
+    .from('profiles')
+    .update({
+      subscription_plan: plan,
+      subscription_status: status,
+      subscription_expires_at: params.expiresAt ?? null,
+      updated_at: now,
+    })
+    .eq('id', params.userId);
+
+  await db.from('subscriptions').upsert(
+    {
+      user_id: params.userId,
+      product_id: product.stripe_product_id,
+      platform: 'web',
+      status: status === 'trial' ? 'grace_period' : 'active',
+      price_monthly: priceMonthly,
+      currency: 'EUR',
+      stripe_price_id: priceId,
+      stripe_product_id: product.id,
+      started_at: now,
+      expires_at: params.expiresAt ?? null,
+      cancelled_at: null,
+    },
+    { onConflict: 'user_id,product_id' }
+  );
+}
+
 export async function attachStripeSubscription(
   db: Db,
   stripe: Stripe,

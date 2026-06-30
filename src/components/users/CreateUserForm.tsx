@@ -119,6 +119,7 @@ export function CreateUserForm({ stripeProducts = [] }: { stripeProducts?: Strip
                     </option>
                   ))}
                 </Select>
+                <p className="mt-1 text-xs text-muted">{t('users.stripeOfferHint')}</p>
               </Field>
               <input type="hidden" name="subscription_plan" value={subscriptionPlan} />
             </>
