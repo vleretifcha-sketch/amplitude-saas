@@ -117,7 +117,6 @@ export async function upsertVideo(formData: FormData): Promise<string> {
           ? String(publishedAt)
           : new Date().toISOString()
         : null,
-    is_premium: formData.get('is_premium') === 'on',
     updated_at: new Date().toISOString(),
   };
 
@@ -132,19 +131,6 @@ export async function upsertVideo(formData: FormData): Promise<string> {
   if (programId) revalidatePath(`/methods`);
   revalidatePath('/exercises');
   return row.id;
-}
-
-export async function setVideoPremium(videoId: string, isPremium: boolean) {
-  const db = createAdminClient();
-  const { error } = await db
-    .from('videos')
-    .update({ is_premium: isPremium, updated_at: new Date().toISOString() })
-    .eq('id', videoId);
-  if (error) throw new Error(error.message);
-
-  revalidatePath('/videos');
-  revalidatePath(`/videos/${videoId}`);
-  revalidatePath('/methods');
 }
 
 export async function deleteVideo(id: string) {

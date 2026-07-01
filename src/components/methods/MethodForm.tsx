@@ -86,16 +86,6 @@ export function MethodForm({ method }: { method?: Method }) {
           <Label htmlFor="tagline">{t('methods.formTagline')}</Label>
           <Input id="tagline" name="tagline" defaultValue={method?.tagline ?? ''} />
         </Field>
-        <Field className="flex items-end gap-2">
-          <input
-            id="is_premium"
-            name="is_premium"
-            type="checkbox"
-            defaultChecked={method?.is_premium ?? true}
-            className="h-4 w-4 rounded border-border"
-          />
-          <Label htmlFor="is_premium">{t('methods.formPremium')}</Label>
-        </Field>
       </div>
       <Button type="submit" disabled={loading}>
         {loading ? t('common.saving') : t('common.save')}

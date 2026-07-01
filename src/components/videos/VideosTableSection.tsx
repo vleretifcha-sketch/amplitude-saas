@@ -6,7 +6,7 @@ import type { Video } from '@/lib/types';
 
 type VideoListRow = Pick<
   Video,
-  'id' | 'title' | 'type' | 'status' | 'program_id' | 'week_number' | 'duration_seconds' | 'order_in_week' | 'is_premium'
+  'id' | 'title' | 'type' | 'status' | 'program_id' | 'week_number' | 'duration_seconds' | 'order_in_week'
 > & {
   programs: { title: string } | { title: string }[] | null;
 };
@@ -18,7 +18,7 @@ export async function VideosTableSection({ locale }: { locale: 'fr' | 'en' }) {
     db
       .from('videos')
       .select(
-        'id, title, type, status, program_id, week_number, duration_seconds, order_in_week, is_premium, programs(title)'
+        'id, title, type, status, program_id, week_number, duration_seconds, order_in_week, programs(title)'
       )
       .order('title'),
     db.from('video_exercises').select('video_id, library_exercise_id'),
@@ -58,7 +58,6 @@ export async function VideosTableSection({ locale }: { locale: 'fr' | 'en' }) {
       vimeo_hash: null,
       order_in_week: video.order_in_week ?? 0,
       published_at: null,
-      is_premium: video.is_premium ?? true,
       created_at: '',
       updated_at: '',
       programTitle: programRelation?.title ?? (video.program_id ? video.program_id : t('common.dash')),

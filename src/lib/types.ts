@@ -12,7 +12,6 @@ export type Method = {
   description: string | null;
   cover_image_url: string | null;
   tagline: string | null;
-  is_premium: boolean;
   status: ProgramStatus;
   published_at: string | null;
   sort_order: number;
@@ -50,7 +49,6 @@ export type Video = {
   order_in_week: number;
   status: VideoStatus;
   published_at: string | null;
-  is_premium: boolean;
   created_at: string;
   updated_at: string;
 };

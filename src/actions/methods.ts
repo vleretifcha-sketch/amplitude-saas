@@ -39,20 +39,6 @@ export async function setMethodPublished(methodId: string, published: boolean) {
   revalidatePath('/');
 }
 
-export async function setMethodPremium(methodId: string, isPremium: boolean) {
-  const db = createAdminClient();
-  const { error } = await db
-    .from('methods')
-    .update({ is_premium: isPremium, updated_at: new Date().toISOString() })
-    .eq('id', methodId);
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath('/methods');
-  revalidatePath(`/methods/${methodId}`);
-  revalidatePath('/');
-}
-
 export async function upsertMethod(formData: FormData): Promise<string> {
   const db = createAdminClient();
   const existingId = String(formData.get('id') || '').trim();
@@ -77,7 +63,6 @@ export async function upsertMethod(formData: FormData): Promise<string> {
     description: String(formData.get('description') || '') || null,
     cover_image_url: coverImageUrl,
     tagline: String(formData.get('tagline') || '') || null,
-    is_premium: formData.get('is_premium') === 'on',
     status,
     published_at: publishedAt,
     sort_order: Number(formData.get('sort_order') || 0),

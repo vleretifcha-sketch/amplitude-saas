@@ -143,20 +143,6 @@ export function VideoForm({
           <Label htmlFor="description">{t('videos.formDescription')}</Label>
           <Textarea id="description" name="description" rows={3} defaultValue={video?.description ?? ''} />
         </Field>
-        <Field className="flex items-center justify-between gap-4 rounded-[var(--radius-input)] border border-border bg-surface-elevated px-4 py-3 md:col-span-2">
-          <div>
-            <p className="text-sm font-medium text-foreground">{t('videos.formPremium')}</p>
-            <p className="mt-0.5 text-xs text-muted">{t('videos.formPremiumHint')}</p>
-          </div>
-          <input
-            id="is_premium"
-            name="is_premium"
-            type="checkbox"
-            defaultChecked={video?.is_premium ?? true}
-            className="h-4 w-4 rounded border-border"
-          />
-        </Field>
-
         {isComplementarySessionType(type) ? (
           <ExerciseListEditor library={library} initialExercises={exercises} />
         ) : (
